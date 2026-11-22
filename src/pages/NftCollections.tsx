@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Search, Shuffle } from 'lucide-react';
+import { ArrowLeft, CheckSquare, ExternalLink, FileText, Lightbulb, Search, Shuffle } from 'lucide-react';
 import { PagesTab } from './project/Pages';
-import { useProjects } from '../lib/data';
+import { useAllPages, useIdeas, useProjects, useTasks } from '../lib/data';
 import { PageHead } from '../components/Shell';
 import { Card, Lightbox, nftKey } from '../components/NftLightbox';
 import { useEnsureCollectionProjects, useNfts, type Nft, type NftData as Data } from '../lib/nft';
@@ -83,6 +83,10 @@ function CollectionView({ data, slug }: { data: Data; slug: string }) {
   const [sp, setSp] = useSearchParams();
   const projects = useProjects();
   const proj = projects.data?.find((p) => p.slug === `koleksiyon-${slug}`);
+  const tasks = useTasks().data, ideas = useIdeas().data, allPages = useAllPages().data;
+  const openTasks = proj ? (tasks ?? []).filter((t) => t.project_id === proj.id && ['todo', 'doing', 'postponed'].includes(t.status)).length : 0;
+  const ideaCount = proj ? (ideas ?? []).filter((i) => i.project_id === proj.id && i.status !== 'archived').length : 0;
+  const pageCount = proj ? (allPages ?? []).filter((x) => x.project_id === proj.id).length : 0;
   const tab = sp.get('sekme') === 'sayfalar' ? 'sayfalar' : 'eserler';
   const setTab = (t: string) => { const n = new URLSearchParams(sp); n.delete('eser'); n.delete('sayfa'); if (t === 'sayfalar') n.set('sekme', t); else n.delete('sekme'); setSp(n, { replace: true }); };
   const list = useMemo(() => {
@@ -105,6 +109,11 @@ function CollectionView({ data, slug }: { data: Data; slug: string }) {
       <div className="row">
         {data.collections.map((c) => <Link key={c.slug} className={`chip${c.slug === slug ? ' chip-on' : ''}`} to={`/koleksiyonlar/${c.slug}`}>{c.name}</Link>)}
       </div>
+      {proj && <div className="row" style={{ gap: 8 }}>
+        <Link className="chip chip-on-soft" to={`/projeler/${proj.slug}/gorevler`}><CheckSquare size={12} />{openTasks} açık görev</Link>
+        <Link className="chip chip-on-soft" to="/fikirler"><Lightbulb size={12} />{ideaCount} fikir</Link>
+        <button type="button" className="chip chip-on-soft" onClick={() => setTab('sayfalar')} style={{ cursor: 'pointer', border: 0 }}><FileText size={12} />{pageCount} sayfa</button>
+      </div>}
       <div className="seg" style={{ justifySelf: 'start' }}>
         <button type="button" className={tab === 'eserler' ? 'on' : ''} onClick={() => setTab('eserler')}>Eserler · {list.length}</button>
         <button type="button" className={tab === 'sayfalar' ? 'on' : ''} onClick={() => setTab('sayfalar')}>Sayfalar ve fikirler</button>

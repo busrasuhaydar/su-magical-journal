@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Sparkles } from 'lucide-react';
+import { FolderHeart, Gem, Plus, Sparkles } from 'lucide-react';
+import { useNfts } from '../lib/nft';
 import { PageHead } from '../components/Shell';
 import { ConfirmButton, Dialog, Empty, Field, useToast } from '../components/ui';
 import { useIdeas, useProjects, useRowMutation, useSoftDelete } from '../lib/data';
@@ -12,6 +13,7 @@ import { IDEA_CATEGORY_LABEL, type Idea, type IdeaCategory } from '../lib/types'
 export default function IdeasPage() {
   const ideas = useIdeas();
   const projects = useProjects();
+  const nfts = useNfts();
   const [cat, setCat] = useState('');
   const [edit, setEdit] = useState<Partial<Idea> | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -30,12 +32,18 @@ export default function IdeasPage() {
       <div className="cards">
         {list.map((i) => {
           const proj = projects.data?.find((p) => p.id === i.converted_project_id);
+          const linked = projects.data?.find((p) => p.id === i.project_id);
+          const work = nfts.data?.items.find((n) => i.body && (i.body.includes(n.opensea) || (n.superrare && i.body.includes(n.superrare))));
           return (
             <div key={i.id} className="glass panel proj-card" onClick={() => setEdit(i)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setEdit(i)} style={{ opacity: i.status === 'archived' ? 0.6 : 1 }}>
               <div className="row" style={{ justifyContent: 'space-between' }}><span className="chip">{IDEA_CATEGORY_LABEL[i.category]}</span><span className="small muted">{formatShort(dayKeyOf(i.created_at))}</span></div>
               <h3>{i.title}</h3>
               {i.body && <p className="small" style={{ margin: 0, whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{i.body}</p>}
               {proj && <span className="small" style={{ color: 'var(--teal-600)' }}>✓ Projeye dönüştü: {proj.title}</span>}
+              {(linked || work) && <div className="row" style={{ gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                {linked && <Link className="chip chip-on-soft" to={`/projeler/${linked.slug}`}><FolderHeart size={12} />{linked.title}</Link>}
+                {work && <Link className="chip chip-on-soft" to={`/koleksiyonlar/${work.c}?eser=${work.contract.slice(0, 10).toLowerCase()}-${work.tokenId}`}><Gem size={12} />{work.name}</Link>}
+              </div>}
             </div>
           );
         })}

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Check, Repeat, CalendarClock, X, ArrowRight } from 'lucide-react';
 import { useCompleteTask, usePostponeTask, useSaveTask, useProjects, useTasks } from '../lib/data';
 import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, todayKey, toInstant } from '../lib/dates';
@@ -43,7 +44,7 @@ export function TaskRow({ task, overdue }: { task: Task; overdue?: boolean }) {
         <div className="meta">
           <span className="row" style={{ gap: 4 }}><i className={`dot p-${task.priority}`} />{PRIORITY_LABEL[task.priority]}</span>
           {day && <span>{formatRelative(day)}{task.starts_at ? ` · ${hhmm(minutesOf(task.starts_at))}` : ''}</span>}
-          {project && <span className="chip" style={{ padding: '1px 8px' }}><i className="dot" style={{ background: project.color }} />{project.title}</span>}
+          {project && <Link className="chip" to={`/projeler/${project.slug}`} onClick={(e) => e.stopPropagation()} style={{ padding: '1px 8px', textDecoration: 'none' }}><i className="dot" style={{ background: project.color }} />{project.title}</Link>}
           {task.category && <span>{task.category}</span>}
           {subs.length > 0 && <span>✓ {subs.filter((s) => s.status === 'done').length}/{subs.length} alt görev</span>}
           {task.rrule && <Repeat size={12} aria-label="Tekrarlanan" />}

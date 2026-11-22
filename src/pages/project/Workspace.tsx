@@ -16,6 +16,7 @@ import {
   type FileRec, type Project, type Task, type TaskStatus,
 } from '../../lib/types';
 import { ProjectEditor } from '../Projects';
+import { isCollectionProject, useNfts } from '../../lib/nft';
 import { GalleryTab, Thumb, useProjectGallery } from './Gallery';
 import { MediaSources } from '../../components/Media';
 import { PagesTab } from './Pages';
@@ -115,6 +116,7 @@ function ProjectHeader({ p }: { p: Project }) {
             <span className="muted">Hedef: <b style={{ color: p.target_date && p.target_date < today && p.status !== 'completed' ? 'var(--bad)' : undefined }}>{p.target_date ? formatShort(p.target_date) + ' ' + parseKey(p.target_date).y : '—'}</b>
               {p.target_date && p.status !== 'completed' && <> · {daysBetween(today, p.target_date) >= 0 ? `${daysBetween(today, p.target_date)} gün kaldı` : `${-daysBetween(today, p.target_date)} gün gecikti`}</>}</span>
             {(progress?.overdue_tasks ?? 0) > 0 && <span className="chip" style={{ color: 'var(--bad)', borderColor: '#F6C1CA' }}><AlertTriangle size={12} />{progress!.overdue_tasks} geciken görev</span>}
+            {isCollectionProject(p) && <CollectionLink slug={p.slug.replace('koleksiyon-', '')} />}
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(true)}><Pencil size={13} />Düzenle</button>
           </div>
         </div>
@@ -463,3 +465,8 @@ function ProjectOppsTab({ p }: { p: Project }) {
   );
 }
 
+
+function CollectionLink({ slug }: { slug: string }) {
+  const n = (useNfts().data?.items ?? []).filter((i) => i.c === slug).length;
+  return <Link className="btn btn-primary btn-sm" to={`/koleksiyonlar/${slug}`}><Compass size={13} />Koleksiyonu aç{n ? ` · ${n} eser` : ''}</Link>;
+}
