@@ -787,3 +787,5 @@ html.simple .glass, html.simple .dialog, html.simple .lb-card, html.simple .cmdk
 .btn.icon-btn, .btn.icon-only { padding: 0; }
 .btn svg, .nav svg, .tabbar svg { flex: none; }
 .btn.icon-btn svg { width: 18px; height: 18px; }
+.auto-ic { display: inline-flex; flex: none; }
+.auto-ic svg { width: 14px; height: 14px; }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Search, Shuffle } from 'lucide-react';
 import { PagesTab } from './project/Pages';
 import { useProjects } from '../lib/data';
@@ -23,7 +23,6 @@ export default function NftCollectionsPage() {
 function Overview({ data }: { data: Data }) {
   const [q, setQ] = useState('');
   const [lb, setLb] = useState<number | null>(null);
-  const nav = useNavigate();
   const by = useMemo(() => { const m = new Map<string, Nft[]>(); data.items.forEach((i) => m.set(i.c, [...(m.get(i.c) ?? []), i])); return m; }, [data]);
   const found = useMemo(() => { const t = norm(q.trim()); return t ? data.items.filter((n) => norm(`${n.name} ${n.description}`).includes(t)) : []; }, [q, data]);
   const sr = data.items.filter((i) => i.superrare).length;
@@ -73,7 +72,6 @@ function Overview({ data }: { data: Data }) {
         </div>
       )}
       {lb != null && lbItems.length > 0 && <Lightbox items={lbItems} index={lbIndex} setIndex={(i) => setLb(lb < 0 ? -1 - i : i)} onClose={() => setLb(null)} />}
-      <button type="button" className="sr-only" onClick={() => nav('/koleksiyonlar')}>Başa dön</button>
     </>
   );
 }
