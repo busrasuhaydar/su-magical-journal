@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Check, CalendarPlus, Lightbulb, ListPlus, Plus, Search, Sparkles } from 'lucide-react';
 import { useWeather } from '../components/Shell';
@@ -11,6 +11,7 @@ import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, startOfWeek, todayK
 import { supabase } from '../lib/supabase';
 import { flag } from '../lib/countries';
 import { shareOriginal, useNfts } from '../lib/nft';
+import { bostonDay, bostonTime, useHomePrefs } from '../lib/ui';
 import { IDEA_CATEGORY_LABEL, OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform, type Task } from '../lib/types';
 import { EVENT_KIND_LABEL, PRIORITY_ORDER, PROJECT_STATUS_LABEL } from '../lib/types';
 
@@ -39,10 +40,11 @@ export default function Home() {
   const toast = useToast();
   const profile = useProfile();
   const weather = useWeather();
+  const hp = useHomePrefs();
   const wk = startOfWeek(today);
   const week = useCalendarRange(wk, addDays(wk, 6));
   const upcoming = useCalendarRange(addDays(today, 1), addDays(today, 30));
-  const hol = useHolidays(today, addDays(today, 30));
+  const hol = useHolidays(wk, addDays(today, 30));
   const overdue = useOverdue();
   const projects = useProjects();
   const progress = useProgress();
@@ -65,7 +67,7 @@ export default function Home() {
   const remaining = tasks.length - done;
   const overdueN = overdue.data?.length ?? 0;
   const upcomingEvents = (upcoming.data?.events ?? []).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 5);
-  const upcomingHol = hol.list.filter((h) => h.country === 'TR' && h.kind === 'public' && h.day > today).slice(0, 2);
+  const upcomingHol = hol.list.filter((h) => h.kind === 'public' && h.day > today).slice(0, 3);
   const deadlines = (projects.data ?? []).filter((p) => p.target_date && p.target_date >= today && p.status !== 'completed').sort((a, b) => a.target_date!.localeCompare(b.target_date!)).slice(0, 3);
   const active = (projects.data ?? []).filter((p) => p.status === 'active' || p.status === 'planning').slice(0, 4);
   const w = weather.data;
@@ -109,12 +111,13 @@ export default function Home() {
               <div className="wtip"><Sparkles size={13} /> {w.tip}</div>
             </>
           ) : <div className="small muted">Hava durumu yükleniyor…</div>}
+          {hp.boston && <div className="boston" title="Boston (ABD Doğu saati)">🇺🇸 Boston <b className="mono">{bostonTime(now)}</b> <span className="muted">{bostonDay(now)}</span></div>}
         </div>
       </section>
 
       <div className="home-grid">
-        <section className="glass panel">
-          <div className="panel-head"><h2>Bugünün planı</h2><span className="count">{timed.length + untimed.length + allDay.length}</span></div>
+        <section className="glass panel" hidden={!hp.visible('plan')}>
+          <div className="panel-head"><h2>{hp.title('plan', 'Bugünün planı')}</h2><span className="count">{timed.length + untimed.length + allDay.length}</span></div>
           {focus && (
             <div className="now-card">
               <span className="small" style={{ color: 'var(--rose-600)', fontWeight: 700 }}>{current ? 'ŞİMDİ' : `SIRADAKİ · ${next!.at - nowMin < 60 ? `${next!.at - nowMin} dk sonra` : hhmm(next!.at)}`}</span>
@@ -165,26 +168,13 @@ export default function Home() {
 
         <div className="col"><ArtOfTheDay /><IdeasCard /></div>
 
-        <section className="glass panel span-all">
-          <div className="panel-head"><h2>Bu hafta</h2><Link className="small" to="/takvim/hafta">Takvim →</Link></div>
-          <div className="week-strip">
-            {DAY_SHORT.map((d, i) => {
-              const k = addDays(wk, i);
-              const ts = (week.data?.tasks ?? []).filter((t) => t.status !== 'cancelled' && t.status !== 'done' && (t.starts_at ? dayKeyOf(t.starts_at) === k : t.due_date === k)).length;
-              const es = (week.data?.events ?? []).filter((e) => dayKeyOf(e.starts_at) === k).length;
-              const hs = hol.byDay.get(k)?.filter((h) => h.kind === 'public').length ?? 0;
-              return (
-                <Link key={k} to={`/gun/${k}`} className={`wday${k === today ? ' today' : ''}`}>
-                  <span className="small">{d}</span><b>{Number(k.slice(8))}</b>
-                  <span className="wdots">{ts > 0 && <em className="wd t">{ts} görev</em>}{es > 0 && <em className="wd e">{es} etk.</em>}{hs > 0 && <em className="wd h">tatil</em>}{!ts && !es && !hs && <em className="wd">boş</em>}</span>
-                </Link>
-              );
-            })}
-          </div>
+        <section className="glass panel span-all" hidden={!hp.visible('week')}>
+          <div className="panel-head"><h2>{hp.title('week', 'Bu hafta')}</h2><Link className="small" to="/takvim/hafta">Takvim →</Link></div>
+          <WeekStrip wk={wk} today={today} data={week.data} hol={hol.byDay} />
         </section>
 
-        <section className="glass panel">
-          <div className="panel-head"><h2>Yaklaşanlar</h2><Link className="small" to="/takvim/ajanda">Ajanda</Link></div>
+        <section className="glass panel" hidden={!hp.visible('upcoming')}>
+          <div className="panel-head"><h2>{hp.title('upcoming', 'Yaklaşanlar')}</h2><Link className="small" to="/takvim/ajanda">Ajanda</Link></div>
           <div className="agenda-mini">
             {upcomingEvents.map((e) => (
               <div key={e.id} className="it" style={{ cursor: 'pointer' }} onClick={() => openEvent(e)}><span className="mono">{formatShort(dayKeyOf(e.starts_at))}</span><span><b style={{ fontWeight: 600 }}>{e.title}</b> <span className="small muted">· {EVENT_KIND_LABEL[e.kind]}{e.all_day ? '' : ` · ${hhmm(minutesOf(e.starts_at))}`}</span></span></div>
@@ -202,10 +192,10 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="glass panel"><SocialSummary /></section>
+        <section className="glass panel" hidden={!hp.visible('social')}><SocialSummary /></section>
 
-        <section className="glass panel">
-          <div className="panel-head"><h2>Projelerim</h2><Link className="small" to="/projeler">Tümü →</Link></div>
+        <section className="glass panel" hidden={!hp.visible('projects')}>
+          <div className="panel-head"><h2>{hp.title('projects', 'Projelerim')}</h2><Link className="small" to="/projeler">Tümü →</Link></div>
           {active.length === 0 ? <Empty title="Henüz proje yok"><Link to="/projeler">İlk projeni ekle</Link>; ilerleme kendiliğinden hesaplanır.</Empty> : (
             <div style={{ display: 'grid', gap: 10 }}>
               {active.map((p) => {
@@ -227,6 +217,7 @@ export default function Home() {
 }
 
 function TodoList() {
+  const hp = useHomePrefs();
   const all = useTasks();
   const save = useSaveTask();
   const complete = useCompleteTask();
@@ -242,9 +233,10 @@ function TodoList() {
     const v = t.trim(); if (!v) return;
     try { await save.mutateAsync({ title: v.slice(0, 200), priority: 'medium', status: 'todo' }); setT(''); } catch (x) { toast.fail(x); }
   }
+  if (!hp.visible('todo')) return null;
   return (
     <section className="glass panel">
-      <div className="panel-head"><h2>Yapılacaklar</h2><span className="count">{open.length}</span></div>
+      <div className="panel-head"><h2>{hp.title('todo', 'Yapılacaklar')}</h2><span className="count">{open.length}</span></div>
       <form className="row" style={{ flexWrap: 'nowrap', marginBottom: 10 }} onSubmit={(e) => { e.preventDefault(); add(); }}>
         <input id="todo-add" className="input" value={t} onChange={(e) => setT(e.target.value)} placeholder="Yeni yapılacak… (Enter)" />
         <button type="submit" className="btn btn-primary icon-btn" aria-label="Ekle"><Plus size={16} /></button>
@@ -268,6 +260,7 @@ function TodoList() {
 }
 
 function IdeasCard() {
+  const hp = useHomePrefs();
   const qc = useQueryClient();
   const toast = useToast();
   const ideas = useIdeas();
@@ -280,9 +273,10 @@ function IdeasCard() {
     if (error) return toast.fail(error);
     setT(''); qc.invalidateQueries({ queryKey: ['ideas'] }); toast.ok('Fikir kaydedildi ✦');
   }
+  if (!hp.visible('ideas')) return null;
   return (
     <section className="glass panel">
-      <div className="panel-head"><h2>Aklımdakiler</h2><Link className="small" to="/fikirler">Tüm fikirler →</Link></div>
+      <div className="panel-head"><h2>{hp.title('ideas', 'Aklımdakiler')}</h2><Link className="small" to="/fikirler">Tüm fikirler →</Link></div>
       <textarea id="qi" className="textarea" style={{ minHeight: 70 }} value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} placeholder="Aklına gelen her şeyi yaz… (⌘+Enter kaydeder)" />
       <button type="button" className="btn btn-primary btn-sm" style={{ margin: '8px 0 12px' }} onClick={save}>Fikri kaydet</button>
       {recent.length === 0 ? <p className="small muted">Henüz fikir yok.</p> : (
@@ -319,6 +313,7 @@ function DailyGoal() {
 }
 
 function SocialSummary() {
+  const hp = useHomePrefs();
   const today = todayKey();
   const week = usePostsRange(today, addDays(today, 6));
   const posts = week.data ?? [];
@@ -327,7 +322,7 @@ function SocialSummary() {
   const failed = posts.filter((p) => p.status === 'failed').length;
   return (
     <>
-      <div className="panel-head"><h2>Sosyal Medya</h2><Link className="small" to="/sosyal">Tümü →</Link></div>
+      <div className="panel-head"><h2>{hp.title('social', 'Sosyal Medya')}</h2><Link className="small" to="/sosyal">Tümü →</Link></div>
       <div className="stat-row">{(['instagram', 'x', 'youtube', 'website'] as Platform[]).map((pl) => <div key={pl} className="stat" style={{ minWidth: 70 }}><b>{count(pl)}</b><span>{PLATFORM_LABEL[pl]}</span></div>)}</div>
       <p className="small muted" style={{ margin: '8px 0' }}>Önümüzdeki 7 günde planlı · {posts.filter((p) => p.status === 'published').length} yayınlandı{failed ? ` · ${failed} başarısız` : ''}</p>
       {todays.length > 0 && <div className="agenda-mini">{todays.map((p) => <div key={p.id} className="it"><span className="mono">{hhmm(minutesOf(p.scheduled_at!))}</span><span><b style={{ fontWeight: 600 }}>{p.title}</b> <span className="small muted">· {POST_STATUS_LABEL[p.status]}</span></span></div>)}</div>}
@@ -337,18 +332,19 @@ function SocialSummary() {
 
 
 function ArtOfTheDay() {
+  const hp = useHomePrefs();
   const nfts = useNfts();
   const toast = useToast();
   const [shift, setShift] = useState(0);
   const items = nfts.data?.items ?? [];
-  if (!items.length) return null;
+  if (!items.length || !hp.visible('art')) return null;
   const day = Math.floor(Date.now() / 86_400_000);
   const n = items[(day * 7 + shift * 13) % items.length];
   const col = nfts.data!.collections.find((c) => c.slug === n.c);
   const to = `/koleksiyonlar/${n.c}?eser=${n.contract.slice(0, 10).toLowerCase()}-${n.tokenId}`;
   return (
     <section className="glass panel">
-      <div className="panel-head"><h2>Günün eseri</h2><button type="button" className="btn btn-ghost btn-sm" onClick={() => setShift((x) => x + 1)}>Başka</button></div>
+      <div className="panel-head"><h2>{hp.title('art', 'Günün eseri')}</h2><button type="button" className="btn btn-ghost btn-sm" onClick={() => setShift((x) => x + 1)}>Başka</button></div>
       <Link to={to} className="aotd">{n.thumb && <img src={n.thumb} alt={n.name} />}</Link>
       <b style={{ display: 'block', marginTop: 8 }}>{n.name}</b>
       <span className="small muted">{col?.name}</span>
@@ -362,6 +358,7 @@ function ArtOfTheDay() {
 
 /** Tekrarlayan düzenler (ör. D vitamini): son yapılan, sıradaki tarih, kalan gün; tek tıkla tamamla. */
 function Routines() {
+  const hp = useHomePrefs();
   const all = useTasks();
   const complete = useCompleteTask();
   const toast = useToast();
@@ -373,10 +370,10 @@ function Routines() {
     const every = Number(/INTERVAL=(\d+)/.exec(t.rrule!)?.[1] ?? 1);
     return { t, last, days, every };
   }).sort((a, b) => a.days - b.days);
-  if (!rows.length) return null;
+  if (!rows.length || !hp.visible('routines')) return null;
   return (
     <section className="glass panel">
-      <div className="panel-head"><h2>Düzenli işler</h2><span className="count">{rows.length}</span></div>
+      <div className="panel-head"><h2>{hp.title('routines', 'Hatırlatmalar')}</h2><span className="count">{rows.length}</span></div>
       <div style={{ display: 'grid', gap: 8 }}>
         {rows.map(({ t, last, days, every }) => (
           <div key={t.id} className={`routine${days <= 1 ? ' soon' : ''}`}>
@@ -390,5 +387,35 @@ function Routines() {
         ))}
       </div>
     </section>
+  );
+}
+
+/** Bu hafta: her günün gerçek içeriği (tatil adı, etkinlik, görev, hatırlatma); hepsi tıklanabilir, boş günde “+” ile ekle. */
+function WeekStrip({ wk, today, data, hol }: { wk: string; today: string; data?: import('../lib/data').CalData; hol: Map<string, import('../lib/types').Holiday[]> }) {
+  const { openTask, openEvent } = useEditors();
+  const nav = useNavigate();
+  return (
+    <div className="week-strip">
+      {DAY_SHORT.map((d, i) => {
+        const k = addDays(wk, i);
+        type Chip = { id: string; label: string; cls: string; run: () => void };
+        const chips: Chip[] = [
+          ...(hol.get(k) ?? []).filter((h) => h.kind !== 'observance' || h.country === 'US').map((h) => ({ id: h.id, label: `${flag(h.country)} ${h.country === 'US' ? h.name : h.local_name}`, cls: 'h', run: () => nav(`/gun/${k}`) })),
+          ...(data?.events ?? []).filter((e) => dayKeyOf(e.starts_at) <= k && dayKeyOf(e.ends_at) >= k).map((e) => ({ id: e.id, label: `${e.all_day ? '' : hhmm(minutesOf(e.starts_at)) + ' '}${e.title}`, cls: 'e', run: () => openEvent(e) })),
+          ...(data?.tasks ?? []).filter((t) => t.status !== 'cancelled' && (t.starts_at ? dayKeyOf(t.starts_at) === k : t.due_date === k)).map((t) => ({ id: t.id, label: `${t.starts_at ? hhmm(minutesOf(t.starts_at)) + ' ' : ''}${t.title}`, cls: `t${t.status === 'done' ? ' done' : ''}`, run: () => openTask(t) })),
+          ...(data?.extras ?? []).filter((x) => x.day === k).map((x) => ({ id: x.id, label: x.label, cls: 'x', run: () => (x.href ? nav(`/${x.href}`) : nav(`/gun/${k}`)) })),
+        ];
+        return (
+          <div key={k} className={`wday${k === today ? ' today' : ''}`}>
+            <Link to={`/gun/${k}`} className="wd-head"><span className="small">{d}</span><b>{Number(k.slice(8))}</b></Link>
+            <div className="wd-list">
+              {chips.slice(0, 4).map((c) => <button type="button" key={c.id} className={`wd-chip ${c.cls}`} title={c.label} onClick={c.run}>{c.label}</button>)}
+              {chips.length > 4 && <Link to={`/gun/${k}`} className="wd-more">+{chips.length - 4} daha</Link>}
+              <button type="button" className="wd-add" aria-label={`${formatShort(k)} için ekle`} title="Bu güne görev ekle" onClick={() => openTask({ due_date: k })}><Plus size={12} /></button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

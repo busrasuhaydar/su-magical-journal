@@ -6,6 +6,7 @@ import { Field, useToast } from '../components/ui';
 import { useProfile, useSocialAccounts, useUpdateProfile } from '../lib/data';
 import { callDispatcher, disablePush, enablePush, pushActive } from '../lib/notify';
 import { CITIES, applySimple, getPref, setPref } from '../lib/prefs';
+import { HOME_SECTIONS, useHomePrefs, type UiPrefs } from '../lib/ui';
 import { supabase } from '../lib/supabase';
 import { todayKey } from '../lib/dates';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -57,6 +58,7 @@ export default function SettingsPage() {
         <p className="small muted" style={{ marginBottom: 0 }}>Saat dilimi: Europe/Istanbul · Tarih biçimi: Türkçe</p>
       </section>
 
+      <HomeSettings />
       <PrefSettings />
 
       <NotificationSettings />
@@ -231,6 +233,36 @@ function PrefSettings() {
         </Field>
       </div>
       <p className="small muted" style={{ marginBottom: 0 }}>Takvimde yalnız Türkiye ve Amerika tatilleri gösterilir. 2026 ve 2027 dinî bayramları Diyanet takvimiyle kesinleşti; 2028 bayramları Diyanet yayımlayana kadar “kesinleşmedi” görünür.</p>
+    </section>
+  );
+}
+
+/** Ana sayfa: kart başlıklarını yeniden adlandır, kartları göster/gizle, Boston saati. Hesapla eşitlenir. */
+function HomeSettings() {
+  const hp = useHomePrefs();
+  const update = useUpdateProfile();
+  const toast = useToast();
+  const [titles, setTitles] = useState<Record<string, string>>({});
+  useEffect(() => { setTitles(hp.ui.titles ?? {}); }, [hp.ui.titles]);
+  const save = (patch: Partial<UiPrefs>) => update.mutate({ ui_prefs: { ...hp.ui, ...patch } }, { onError: (e) => toast.fail(e) });
+  const toggle = (k: string) => { const hide = new Set(hp.ui.hide ?? []); hide.has(k) ? hide.delete(k) : hide.add(k); save({ hide: [...hide] }); };
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Ana sayfa</h2><button type="button" className="btn btn-glass btn-sm" onClick={() => { setTitles({}); save({ titles: {}, hide: [] }); }}><RotateCcw size={13} />Varsayılana dön</button></div>
+      <p className="small muted" style={{ marginTop: 0 }}>Kart başlıklarını istediğin gibi yaz, istemediğin kartı gizle. Değişiklikler telefonda ve bilgisayarda aynı olur.</p>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {HOME_SECTIONS.map(([k, def]) => (
+          <div key={k} className="row" style={{ flexWrap: 'nowrap', gap: 10 }}>
+            <input type="checkbox" aria-label={`${def} göster`} checked={!(hp.ui.hide ?? []).includes(k)} onChange={() => toggle(k)} />
+            <input className="input" value={titles[k] ?? ''} placeholder={def} onChange={(e) => setTitles((t) => ({ ...t, [k]: e.target.value }))}
+              onBlur={() => { if ((hp.ui.titles?.[k] ?? '') !== (titles[k] ?? '')) save({ titles: { ...(hp.ui.titles ?? {}), [k]: (titles[k] ?? '').trim() } }); }} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+          </div>
+        ))}
+        <label className="row small" style={{ cursor: 'pointer' }}>
+          <input type="checkbox" checked={hp.boston} onChange={(e) => save({ boston: e.target.checked })} />
+          🇺🇸 Ana sayfada küçük Boston saati göster
+        </label>
+      </div>
     </section>
   );
 }

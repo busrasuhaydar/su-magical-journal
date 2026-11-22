@@ -764,3 +764,21 @@ html.simple .glass, html.simple .dialog, html.simple .lb-card, html.simple .cmdk
 .pill.extra[style*="pointer"] { cursor: pointer; }
 .mcell .pill.followup, .mcell .pill.milestone, .mcell .pill.project, .mcell .pill.repeat { color: #fff; border-style: solid; }
 .mcell .pill.followup, .mcell .pill.repeat { background: var(--teal-500); } .mcell .pill.milestone { background: var(--orange-500); } .mcell .pill.project { background: var(--rose-700); }
+.boston { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.6); font-size: 12.5px; color: var(--ink-700); }
+.week-strip .wday { justify-items: stretch; text-align: left; padding: 8px; gap: 6px; align-content: start; min-height: 120px; transition: none; }
+.wd-head { display: flex; justify-content: space-between; align-items: baseline; text-decoration: none; color: inherit; padding: 0 2px; }
+.wday.today .wd-head { color: #fff; }
+.wd-list { display: grid; gap: 4px; }
+.wd-chip { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font-size: 11.5px; line-height: 1.25; padding: 4px 7px; border-radius: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-900); background: rgba(255,255,255,.75); box-shadow: inset 0 0 0 1px rgba(255,255,255,.9); }
+.wd-chip:hover { background: #fff; }
+.wd-chip.h { background: rgba(255,122,48,.16); color: #8A3F0C; }
+.wd-chip.e { background: rgba(0,194,186,.16); color: #0B5E5B; }
+.wd-chip.t { background: rgba(255,61,142,.14); color: var(--rose-700); }
+.wd-chip.t.done { text-decoration: line-through; opacity: .6; }
+.wd-chip.x { background: rgba(160,102,240,.14); color: #4E3384; }
+.wday.today .wd-chip { box-shadow: none; }
+.wd-more { font-size: 11px; color: var(--ink-500); text-decoration: none; padding: 0 4px; }
+.wday.today .wd-more { color: rgba(255,255,255,.9); }
+.wd-add { justify-self: start; width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; background: rgba(255,255,255,.6); color: var(--rose-600); opacity: .6; }
+.wd-add:hover { opacity: 1; background: #fff; }
+@media (max-width: 760px) { .week-strip { grid-template-columns: 1fr; } .week-strip .wday { min-height: 0; } }

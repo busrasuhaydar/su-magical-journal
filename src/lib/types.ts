@@ -6,7 +6,7 @@ export type BlockKind = 'note' | 'image' | 'video' | 'audio' | 'pdf' | 'document
 
 export interface Profile {
   id: string; display_name: string | null; timezone: string;
-  hidden_holiday_countries: string[]; show_observances: boolean; email_notifications?: boolean;
+  hidden_holiday_countries: string[]; show_observances: boolean; email_notifications?: boolean; ui_prefs?: import('./ui').UiPrefs;
 }
 export interface Project {
   id: string; title: string; slug: string; status: ProjectStatus; priority: Priority;
