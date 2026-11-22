@@ -68,17 +68,19 @@ export async function saveOriginal(n: Nft, video = false) {
   catch { window.open((video ? n.video : n.original) ?? n.opensea, '_blank'); return 'opened' as const; }
 }
 export const shareText = (n: Nft) => `${n.name}\n${n.superrare ?? n.opensea}`;
-/** Telefonda paylaş menüsü (orijinal dosyayla); bilgisayarda dosyayı indirir ve X paylaşım penceresini açar. */
-export async function shareOriginal(n: Nft): Promise<'sheet' | 'intent'> {
+/** Telefonda paylaş menüsü (orijinal dosyayla); bilgisayarda görsel panoya kopyalanır ve X açılır: tweet kutusuna Cmd+V ile yapıştır. */
+export async function shareOriginal(n: Nft): Promise<'sheet' | 'clipboard' | 'intent'> {
   const text = shareText(n);
+  const url = n.superrare ?? n.opensea;
   try {
     const { blob, name } = await fetchOriginal(n);
     const file = new File([blob], name, { type: blob.type });
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text }); return 'sheet'; }
-    saveBlob(blob, name);
-  } catch { /* dosya alınamazsa yalnız metin */ }
-  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(n.name)}&url=${encodeURIComponent(n.superrare ?? n.opensea)}`, '_blank');
-  return 'intent';
+  } catch (x) { if ((x as Error).name === 'AbortError') throw x; }
+  let copied = false;
+  try { await copyImage(n); copied = true; } catch { /* panoya konamazsa yalnız bağlantı */ }
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(n.name)}&url=${encodeURIComponent(url)}`, '_blank');
+  return copied ? 'clipboard' : 'intent';
 }
 
 /** Orijinal görseli panoya koyar (Cmd+V ile X/Instagram'a yapıştırılır). Tarayıcı yalnız PNG kabul ettiği için gerekirse PNG'ye çevrilir. */

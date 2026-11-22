@@ -116,7 +116,7 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
   const detail = [n.name, n.description, n.opensea, n.superrare].filter(Boolean).join('\n\n');
   async function save(video = false) { setBusy('save'); const r = await saveOriginal(n, video); toast.ok(r === 'saved' ? 'Orijinal dosya indirildi' : 'Orijinal yeni sekmede açıldı'); setBusy(''); }
   async function copyImg() { setBusy('img'); try { await copyImage(n); toast.ok('Görsel kopyalandı: Cmd+V ile yapıştır'); } catch (x) { toast.fail(x); } setBusy(''); }
-  async function share() { setBusy('share'); try { const r = await shareOriginal(n); toast.ok(r === 'sheet' ? 'Paylaş menüsü açıldı' : 'Orijinal indirildi; X penceresinde görseli ekle'); } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); } setBusy(''); }
+  async function share() { setBusy('share'); try { const r = await shareOriginal(n); toast.ok(r === 'sheet' ? 'Paylaş menüsü açıldı' : r === 'clipboard' ? 'Görsel kopyalandı: X penceresinde Cmd+V ile yapıştır' : 'X açıldı; görseli Orijinali kaydet ile indirip ekle'); } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); } setBusy(''); }
   return (
     <div className="lb" role="dialog" aria-modal="true" aria-label={n.name}>
       <div className="lb-bg" onClick={onClose} />
