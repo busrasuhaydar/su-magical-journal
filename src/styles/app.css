@@ -634,3 +634,45 @@ h1 { font-size: 36px; } h2 { font-size: 25px; } h3 { font-size: 19px; }
 @media (prefers-reduced-motion: reduce) { .btn, .task-row, .nav a { transition: none; } }
 
 .sidebar { overflow-y: auto; overflow-x: hidden; }
+
+/* ── Ana sayfa v2 ── */
+.hero { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: var(--s5); padding: 28px; align-items: center; }
+.hero-main { display: grid; gap: 12px; min-width: 0; }
+.hero-sum { margin: 0; font-size: 16px; color: var(--ink-700); max-width: 620px; }
+.qa { display: flex; flex-wrap: wrap; gap: 8px; }
+.kbd { font-family: var(--f-mono); font-size: 10.5px; opacity: .6; margin-left: 2px; }
+.hero-weather { display: grid; gap: 2px; justify-items: start; padding: 18px 20px; border-radius: 24px; background: linear-gradient(155deg, rgba(255,255,255,.7), rgba(255,255,255,.3)); box-shadow: var(--lg-edge); }
+.wtemp { font-family: var(--f-serif); font-size: 52px; line-height: 1; font-weight: 600; background: linear-gradient(135deg, #FF3D8E, #FF7A30); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wlabel { font-weight: 650; }
+.wtip { margin-top: 8px; font-size: 13px; color: var(--rose-600); display: flex; gap: 6px; align-items: flex-start; }
+.col { display: grid; gap: var(--s5); min-width: 0; }
+.now-card { display: grid; gap: 4px; padding: 14px 16px; border-radius: 20px; margin-bottom: 12px; background: linear-gradient(135deg, rgba(255,61,142,.16), rgba(255,122,48,.14)); box-shadow: var(--lg-edge); }
+.plan { display: grid; gap: 4px; }
+.plan-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) 22px; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 14px; border: 0; background: transparent; text-align: left; cursor: pointer; width: 100%; transition: background .25s var(--ease); }
+.plan-row:hover { background: rgba(255,255,255,.6); }
+.plan-row .mono { color: var(--rose-600); font-size: 12.5px; }
+.plan-row .pt { min-width: 0; overflow-wrap: anywhere; }
+.plan-row.past { opacity: .55; }
+.plan-row.done .pt b { text-decoration: line-through; color: var(--ink-500); }
+.plan-row.live { background: rgba(255,255,255,.7); box-shadow: var(--lg-edge); }
+.plan-row > .dot { grid-column: 1; justify-self: end; }
+.plan-sep { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-500); font-weight: 600; padding: 10px 10px 2px; }
+.todo { display: grid; gap: 4px; }
+.todo-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 12px; }
+.todo-row:hover { background: rgba(255,255,255,.55); }
+.todo-t { flex: 1; text-align: left; border: 0; background: transparent; cursor: pointer; display: flex; gap: 8px; align-items: center; padding: 2px 0; min-width: 0; overflow-wrap: anywhere; }
+.todo-row.done .todo-t { text-decoration: line-through; color: var(--ink-500); }
+.focus-t { font-size: 46px; text-align: center; font-weight: 500; letter-spacing: -.03em; background: linear-gradient(135deg, #FF3D8E, #FF7A30); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.idea-list { display: grid; gap: 6px; }
+.idea-it { display: grid; gap: 1px; padding: 9px 12px; border-radius: 14px; text-decoration: none; color: inherit; background: rgba(255,255,255,.5); transition: background .25s, transform .3s var(--ease); }
+.idea-it:hover { background: rgba(255,255,255,.85); transform: translateX(3px); }
+.week-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.wday { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 10px 4px; border-radius: 18px; text-decoration: none; color: inherit; background: rgba(255,255,255,.45); transition: transform .3s var(--ease), background .25s; }
+.wday:hover { transform: translateY(-2px); background: rgba(255,255,255,.8); }
+.wday b { font-family: var(--f-serif); font-size: 22px; }
+.wday.today { background: linear-gradient(135deg, #FF3D8E, #FF7A30); color: #fff; box-shadow: 0 10px 20px -10px rgba(255,61,142,.8); }
+.wday.today .small, .wday.today .wd { color: rgba(255,255,255,.92); }
+.wdots { display: grid; gap: 1px; }
+.wd { font-style: normal; font-size: 10.5px; color: var(--ink-500); }
+.wd.t { color: var(--rose-600); font-weight: 600; } .wd.e { color: var(--teal-600); font-weight: 600; } .wd.h { color: var(--orange-600); font-weight: 600; }
+@media (max-width: 760px) { .hero { grid-template-columns: minmax(0, 1fr); padding: 20px; } .week-strip { gap: 4px; } .wd { font-size: 9px; } }

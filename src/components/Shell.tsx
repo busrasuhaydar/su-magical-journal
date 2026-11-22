@@ -15,24 +15,37 @@ function useNow() {
   return now;
 }
 
-// Open-Meteo: anahtarsız, İstanbul varsayılan
+// Open-Meteo: anahtarsız, Bursa
 const WMO: [number[], string, typeof Sun][] = [
   [[0, 1], 'Açık', Sun], [[2, 3], 'Parçalı bulutlu', Cloud], [[45, 48], 'Sisli', CloudFog],
   [[51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82], 'Yağmurlu', CloudRain],
   [[71, 73, 75, 77, 85, 86], 'Karlı', CloudSnow], [[95, 96, 99], 'Fırtınalı', CloudLightning],
 ];
-function useWeather() {
+export function useWeather() {
   return useQuery({
-    queryKey: ['weather'],
+    queryKey: ['weather', 'bursa'],
     staleTime: 30 * 60_000,
     retry: 0,
     queryFn: async () => {
-      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=41.01&longitude=28.98&current=temperature_2m,weather_code&timezone=Europe%2FIstanbul');
+      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.19&longitude=29.06&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FIstanbul&forecast_days=1');
       if (!r.ok) throw new Error('hava durumu');
       const j = await r.json();
       const code = j.current.weather_code as number;
       const m = WMO.find(([codes]) => codes.includes(code)) ?? WMO[1];
-      return { temp: Math.round(j.current.temperature_2m as number), label: m[1], Icon: m[2] };
+      const temp = Math.round(j.current.temperature_2m as number);
+      const rain = Math.round((j.daily.precipitation_probability_max?.[0] ?? 0) as number);
+      const hi = Math.round(j.daily.temperature_2m_max[0] as number), lo = Math.round(j.daily.temperature_2m_min[0] as number);
+      const wind = Math.round(j.current.wind_speed_10m as number);
+      const tips: string[] = [];
+      if (rain >= 50 || m[1] === 'Yağmurlu') tips.push('Şemsiyeni al ☂');
+      if (m[1] === 'Karlı') tips.push('Kar var, sıcak giyin ❄');
+      if (m[1] === 'Fırtınalı') tips.push('Fırtına olası, dışarı çıkacaksan dikkat');
+      if (temp <= 8) tips.push('Soğuk, mont şart');
+      else if (temp <= 16) tips.push('Serin, ince bir ceket iyi olur');
+      else if (temp >= 29) tips.push('Sıcak, bol su iç');
+      if (wind >= 30) tips.push('Rüzgâr sert');
+      if (!tips.length) tips.push(m[1] === 'Açık' ? 'Hava güzel, kısa bir yürüyüş iyi gelir' : 'Çıkmak için uygun bir gün');
+      return { temp, feels: Math.round(j.current.apparent_temperature as number), label: m[1], Icon: m[2], rain, hi, lo, wind, tip: tips.join(' · ') };
     },
   });
 }
@@ -49,7 +62,7 @@ export function Clock() {
       {w.data && (
         <div className="weather" title="Open-Meteo">
           <w.data.Icon size={20} color="var(--orange-500)" />
-          <span><b>{w.data.temp}°C</b><br />İstanbul · {w.data.label}</span>
+          <span><b>{w.data.temp}°C</b><br />Bursa · {w.data.label}</span>
         </div>
       )}
     </div>

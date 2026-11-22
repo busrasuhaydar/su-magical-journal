@@ -1,102 +1,197 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Plus, Star } from 'lucide-react';
-import { Clock } from '../components/Shell';
+import { ArrowRight, Check, CalendarPlus, Lightbulb, ListPlus, Pause, Play, Plus, RotateCcw, Search, Sparkles, Timer } from 'lucide-react';
+import { useWeather } from '../components/Shell';
 import { useEditors } from '../components/Editors';
 import { TaskRow } from '../components/TaskRow';
 import { Empty, useToast } from '../components/ui';
-import { ensureJournalDay, useCalendarRange, useHolidays, useJournal, useOverdue, useProfile, useProgress, useProjects } from '../lib/data';
-import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, todayKey, formatShort } from '../lib/dates';
+import { ensureJournalDay, useCalendarRange, useCompleteTask, useHolidays, useIdeas, useJournal, useOverdue, useProfile, useProgress, useProjects, useSaveTask, useTasks, usePostsRange } from '../lib/data';
+import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, startOfWeek, todayKey, formatShort } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { flag } from '../lib/countries';
-import { usePostsRange } from '../lib/data';
-import { OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform } from '../lib/types';
+import { IDEA_CATEGORY_LABEL, OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform, type Task } from '../lib/types';
 import { EVENT_KIND_LABEL, PRIORITY_ORDER, PROJECT_STATUS_LABEL } from '../lib/types';
+
+const DAY_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+function useMinute() {
+  const [n, setN] = useState(() => new Date());
+  useEffect(() => { const t = setInterval(() => setN(new Date()), 30_000); return () => clearInterval(t); }, []);
+  return n;
+}
+function greeting(min: number) {
+  if (min < 5 * 60) return 'İyi geceler';
+  if (min < 12 * 60) return 'Günaydın';
+  if (min < 18 * 60) return 'İyi günler';
+  return 'İyi akşamlar';
+}
+
+interface Item { id: string; at: number; end: number; title: string; sub: string; task?: Task; event?: import('../lib/types').CalEvent; done: boolean }
 
 export default function Home() {
   const today = todayKey();
-  const { openTask } = useEditors();
+  const now = useMinute();
+  const nowMin = minutesOf(now);
+  const { openTask, openEvent } = useEditors();
+  const complete = useCompleteTask();
+  const toast = useToast();
   const profile = useProfile();
-  const day = useCalendarRange(today, today);
+  const weather = useWeather();
+  const wk = startOfWeek(today);
+  const week = useCalendarRange(wk, addDays(wk, 6));
   const upcoming = useCalendarRange(addDays(today, 1), addDays(today, 30));
   const hol = useHolidays(today, addDays(today, 30));
   const overdue = useOverdue();
   const projects = useProjects();
   const progress = useProgress();
 
-  const tasks = (day.data?.tasks ?? []).filter((t) => t.status !== 'cancelled');
+  const todayData = {
+    tasks: (week.data?.tasks ?? []).filter((t) => t.status !== 'cancelled' && (t.starts_at ? dayKeyOf(t.starts_at) === today : t.due_date === today)),
+    events: (week.data?.events ?? []).filter((e) => dayKeyOf(e.starts_at) <= today && dayKeyOf(e.ends_at) >= today),
+  };
+  const tasks = todayData.tasks;
   const done = tasks.filter((t) => t.status === 'done').length;
-  const priorities = tasks.filter((t) => t.status !== 'done').sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
-  const schedule = [
-    ...tasks.filter((t) => t.starts_at).map((t) => ({ id: t.id, at: minutesOf(t.starts_at!), title: t.title, sub: 'Görev', done: t.status === 'done' })),
-    ...(day.data?.events ?? []).map((e) => ({ id: e.id, at: e.all_day || dayKeyOf(e.starts_at) < today ? -1 : minutesOf(e.starts_at), title: e.title, sub: EVENT_KIND_LABEL[e.kind], done: false })),
+  const timed: Item[] = [
+    ...tasks.filter((t) => t.starts_at).map((t) => ({ id: t.id, at: minutesOf(t.starts_at!), end: t.ends_at ? minutesOf(t.ends_at) : minutesOf(t.starts_at!) + 30, title: t.title, sub: 'Görev', task: t, done: t.status === 'done' })),
+    ...todayData.events.filter((e) => !e.all_day).map((e) => ({ id: e.id, at: dayKeyOf(e.starts_at) < today ? 0 : minutesOf(e.starts_at), end: dayKeyOf(e.ends_at) > today ? 24 * 60 : minutesOf(e.ends_at), title: e.title, sub: EVENT_KIND_LABEL[e.kind], event: e, done: false })),
   ].sort((a, b) => a.at - b.at);
-  const upcomingEvents = (upcoming.data?.events ?? []).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 6);
-  const upcomingHol = hol.list.filter((h) => h.country === 'TR' && h.kind === 'public' && h.day > today).slice(0, 3);
+  const allDay = todayData.events.filter((e) => e.all_day);
+  const untimed = tasks.filter((t) => !t.starts_at).sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+  const current = timed.find((i) => !i.done && i.at <= nowMin && i.end > nowMin);
+  const next = timed.find((i) => !i.done && i.at > nowMin);
+  const focus = current ?? next;
+  const remaining = tasks.length - done;
+  const overdueN = overdue.data?.length ?? 0;
+  const upcomingEvents = (upcoming.data?.events ?? []).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 5);
+  const upcomingHol = hol.list.filter((h) => h.country === 'TR' && h.kind === 'public' && h.day > today).slice(0, 2);
   const deadlines = (projects.data ?? []).filter((p) => p.target_date && p.target_date >= today && p.status !== 'completed').sort((a, b) => a.target_date!.localeCompare(b.target_date!)).slice(0, 3);
   const active = (projects.data ?? []).filter((p) => p.status === 'active' || p.status === 'planning').slice(0, 4);
+  const w = weather.data;
+
+  const bits: string[] = [];
+  if (tasks.length || todayData.events.length) bits.push(`Bugün ${tasks.length} görev ve ${todayData.events.length} etkinlik var`);
+  else bits.push('Bugün takvimin boş, sakin bir gün');
+  if (done && remaining === 0 && tasks.length) bits.push('hepsini bitirdin, harikasın');
+  else if (current) bits.push(`şu an “${current.title}” zamanı`);
+  else if (next) bits.push(`sıradaki iş ${hhmm(next.at)} “${next.title}”`);
+  if (overdueN) bits.push(`${overdueN} bekleyen görev seni bekliyor`);
+
+  async function tick(t: Task) {
+    try { await complete.mutateAsync({ id: t.id, done: t.status !== 'done' }); if (t.status !== 'done') toast.ok('Tamamlandı ✓'); } catch (x) { toast.fail(x); }
+  }
+  const openSearch = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
 
   return (
     <>
-      <div className="topbar">
-        <div>
-          <span className="script" style={{ fontSize: 40, lineHeight: 1 }}>Merhaba {profile.data?.display_name ?? ''}</span>
-          <div className="muted">Bugün harika şeyler başaracaksın.</div>
+      <section className="glass hero">
+        <div className="hero-main">
+          <span className="script" style={{ fontSize: 44, lineHeight: 1 }}>{greeting(nowMin)} {profile.data?.display_name ?? ''}</span>
+          <p className="hero-sum">{bits.join(' · ')}.</p>
+          {tasks.length > 0 && <div className="prog" style={{ maxWidth: 420 }}><b style={{ width: `${Math.round((done / tasks.length) * 100)}%` }} /></div>}
+          <div className="qa">
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => openTask({ due_date: today })}><Plus size={14} />Görev</button>
+            <button type="button" className="btn btn-glass btn-sm" onClick={() => openEvent({})}><CalendarPlus size={14} />Etkinlik</button>
+            <button type="button" className="btn btn-glass btn-sm" onClick={() => { const el = document.getElementById('qi') as HTMLTextAreaElement | null; el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.focus(); }}><Lightbulb size={14} />Fikir</button>
+            <button type="button" className="btn btn-glass btn-sm" onClick={() => document.getElementById('todo-add')?.focus()}><ListPlus size={14} />Yapılacak</button>
+            <button type="button" className="btn btn-glass btn-sm" onClick={openSearch}><Search size={14} />Ara <kbd className="kbd">⌘K</kbd></button>
+            <Link className="btn btn-glass btn-sm" to={`/gun/${today}`}>Günlük plan <ArrowRight size={14} /></Link>
+          </div>
         </div>
-        <Clock />
-      </div>
+        <div className="hero-weather">
+          {w ? (
+            <>
+              <w.Icon size={44} color="var(--orange-500)" strokeWidth={1.5} />
+              <div className="wtemp">{w.temp}°</div>
+              <div className="wlabel">Bursa · {w.label}</div>
+              <div className="small muted">Hissedilen {w.feels}° · {w.lo}° / {w.hi}° · yağış %{w.rain}</div>
+              <div className="wtip"><Sparkles size={13} /> {w.tip}</div>
+            </>
+          ) : <div className="small muted">Bursa hava durumu yükleniyor…</div>}
+        </div>
+      </section>
 
       <div className="home-grid">
         <section className="glass panel">
-          <div className="panel-head"><h2>Bugünün özeti <Star size={16} color="var(--orange-500)" fill="var(--peach-300)" /></h2></div>
-          <DailyGoal />
-          <div className="stat-row" style={{ marginTop: 14 }}>
-            <div className="stat"><b>{tasks.length}</b><span>Bugünkü görev</span></div>
-            <div className="stat"><b>{done}</b><span>Tamamlanan</span></div>
-            <div className="stat"><b>{tasks.length - done}</b><span>Kalan</span></div>
-          </div>
-          {tasks.length > 0 && <div className="prog" style={{ marginTop: 12 }}><b style={{ width: `${Math.round((done / tasks.length) * 100)}%` }} /></div>}
-          <h3 style={{ marginTop: 20, marginBottom: 8 }}>Öncelikli görevler</h3>
-          {priorities.length === 0 ? <p className="small muted">{tasks.length ? 'Bugünün bütün görevleri tamam ♡' : 'Bugün için görev yok.'}</p> :
-            <div className="task-list">{priorities.slice(0, 5).map((t) => <TaskRow key={t.id} task={t} />)}</div>}
-          <div className="row" style={{ marginTop: 12 }}>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => openTask({ due_date: today })}><Plus size={14} />Görev ekle</button>
-            <Link className="btn btn-glass btn-sm" to={`/gun/${today}`}>Günün detayları <ArrowRight size={14} /></Link>
-          </div>
-        </section>
-
-        <section className="glass panel">
-          <div className="panel-head"><h2>Bugünün planı</h2><span className="count">{schedule.length}</span></div>
-          {schedule.length === 0 ? <Empty title="Sakin bir gün">Saatlik planınıza görev veya etkinlik ekleyin.</Empty> : (
-            <div className="agenda-mini">
-              {schedule.map((s) => (
-                <div key={s.id} className="it" style={{ opacity: s.done ? 0.55 : 1 }}>
-                  <span className="mono">{s.at < 0 ? 'Tüm gün' : hhmm(s.at)}</span>
-                  <span><b style={{ fontWeight: 600, textDecoration: s.done ? 'line-through' : undefined }}>{s.title}</b> <span className="small muted">· {s.sub}</span></span>
+          <div className="panel-head"><h2>Bugünün planı</h2><span className="count">{timed.length + untimed.length + allDay.length}</span></div>
+          {focus && (
+            <div className="now-card">
+              <span className="small" style={{ color: 'var(--rose-600)', fontWeight: 700 }}>{current ? 'ŞİMDİ' : `SIRADAKİ · ${next!.at - nowMin < 60 ? `${next!.at - nowMin} dk sonra` : hhmm(next!.at)}`}</span>
+              <b style={{ fontSize: 17 }}>{focus.title}</b>
+              <div className="row" style={{ gap: 6 }}>
+                <span className="small muted">{hhmm(focus.at)}–{hhmm(focus.end % (24 * 60))} · {focus.sub}</span>
+                <span style={{ flex: 1 }} />
+                {focus.task && <button type="button" className="btn btn-primary btn-sm" onClick={() => tick(focus.task!)}><Check size={14} />Tamamla</button>}
+                <button type="button" className="btn btn-glass btn-sm" onClick={() => focus.task ? openTask(focus.task) : openEvent(focus.event!)}>Aç</button>
+              </div>
+            </div>
+          )}
+          {timed.length + untimed.length + allDay.length === 0 ? <Empty title="Sakin bir gün">Bir görev ya da etkinlik ekleyerek günü planla.</Empty> : (
+            <div className="plan">
+              {allDay.map((e) => <button type="button" key={e.id} className="plan-row" onClick={() => openEvent(e)}><span className="mono">Tüm gün</span><span className="pt"><b>{e.title}</b> <span className="small muted">· {EVENT_KIND_LABEL[e.kind]}</span></span></button>)}
+              {timed.map((i) => (
+                <div key={i.id} className={`plan-row${i.done ? ' done' : ''}${i === current ? ' live' : ''}${!i.done && i.end <= nowMin ? ' past' : ''}`} role="button" tabIndex={0}
+                  onClick={() => i.task ? openTask(i.task) : openEvent(i.event!)} onKeyDown={(e) => e.key === 'Enter' && (i.task ? openTask(i.task) : openEvent(i.event!))}>
+                  <span className="mono">{hhmm(i.at)}</span>
+                  <span className="pt"><b>{i.title}</b> <span className="small muted">· {i.sub}</span></span>
+                  {i.task ? <button type="button" className={`check${i.done ? ' on' : ''}`} aria-label="Tamamla" onClick={(e) => { e.stopPropagation(); tick(i.task!); }}>{i.done && <Check size={14} strokeWidth={3} />}</button> : <span />}
+                </div>
+              ))}
+              {untimed.length > 0 && <div className="plan-sep">Gün içinde, saati yok</div>}
+              {untimed.map((t) => (
+                <div key={t.id} className={`plan-row${t.status === 'done' ? ' done' : ''}`} role="button" tabIndex={0} onClick={() => openTask(t)} onKeyDown={(e) => e.key === 'Enter' && openTask(t)}>
+                  <i className={`dot p-${t.priority}`} style={{ marginTop: 7 }} />
+                  <span className="pt"><b>{t.title}</b></span>
+                  <button type="button" className={`check${t.status === 'done' ? ' on' : ''}`} aria-label="Tamamla" onClick={(e) => { e.stopPropagation(); tick(t); }}>{t.status === 'done' && <Check size={14} strokeWidth={3} />}</button>
                 </div>
               ))}
             </div>
           )}
-          {(overdue.data?.length ?? 0) > 0 && (
+          {overdueN > 0 && (
             <>
-              <h3 style={{ marginTop: 20, marginBottom: 8, color: 'var(--orange-600)' }}>Bekleyen {overdue.data!.length} görev</h3>
+              <h3 style={{ marginTop: 18, marginBottom: 8, color: 'var(--orange-600)' }}>Bekleyen {overdueN} görev</h3>
               <div className="task-list">{overdue.data!.slice(0, 3).map((t) => <TaskRow key={t.id} task={t} overdue />)}</div>
-              {overdue.data!.length > 3 && <Link className="small" to={`/gun/${today}`}>Tümünü gör</Link>}
+              {overdueN > 3 && <Link className="small" to="/gorevler">Tümünü gör →</Link>}
             </>
           )}
+          <DailyGoal />
+        </section>
+
+        <div className="col">
+          <TodoList />
+          <FocusTimer title={focus?.title} />
+        </div>
+
+        <IdeasCard />
+
+        <section className="glass panel span-all">
+          <div className="panel-head"><h2>Bu hafta</h2><Link className="small" to="/takvim/hafta">Takvim →</Link></div>
+          <div className="week-strip">
+            {DAY_SHORT.map((d, i) => {
+              const k = addDays(wk, i);
+              const ts = (week.data?.tasks ?? []).filter((t) => t.status !== 'cancelled' && t.status !== 'done' && (t.starts_at ? dayKeyOf(t.starts_at) === k : t.due_date === k)).length;
+              const es = (week.data?.events ?? []).filter((e) => dayKeyOf(e.starts_at) === k).length;
+              const hs = hol.byDay.get(k)?.filter((h) => h.kind === 'public').length ?? 0;
+              return (
+                <Link key={k} to={`/gun/${k}`} className={`wday${k === today ? ' today' : ''}`}>
+                  <span className="small">{d}</span><b>{Number(k.slice(8))}</b>
+                  <span className="wdots">{ts > 0 && <em className="wd t">{ts} görev</em>}{es > 0 && <em className="wd e">{es} etk.</em>}{hs > 0 && <em className="wd h">tatil</em>}{!ts && !es && !hs && <em className="wd">boş</em>}</span>
+                </Link>
+              );
+            })}
+          </div>
         </section>
 
         <section className="glass panel">
           <div className="panel-head"><h2>Yaklaşanlar</h2><Link className="small" to="/takvim/ajanda">Ajanda</Link></div>
           <div className="agenda-mini">
             {upcomingEvents.map((e) => (
-              <div key={e.id} className="it"><span className="mono">{formatShort(dayKeyOf(e.starts_at))}</span><span><b style={{ fontWeight: 600 }}>{e.title}</b> <span className="small muted">· {EVENT_KIND_LABEL[e.kind]}{e.all_day ? '' : ` · ${hhmm(minutesOf(e.starts_at))}`}</span></span></div>
+              <div key={e.id} className="it" style={{ cursor: 'pointer' }} onClick={() => openEvent(e)}><span className="mono">{formatShort(dayKeyOf(e.starts_at))}</span><span><b style={{ fontWeight: 600 }}>{e.title}</b> <span className="small muted">· {EVENT_KIND_LABEL[e.kind]}{e.all_day ? '' : ` · ${hhmm(minutesOf(e.starts_at))}`}</span></span></div>
             ))}
             {deadlines.map((p) => (
-              <div key={p.id} className="it"><span className="mono" style={{ color: 'var(--orange-600)' }}>{formatShort(p.target_date!)}</span><span><b style={{ fontWeight: 600 }}>{p.title}</b> <span className="small muted">· proje hedef tarihi</span></span></div>
+              <div key={p.id} className="it"><span className="mono" style={{ color: 'var(--orange-600)' }}>{formatShort(p.target_date!)}</span><Link to={`/projeler/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}><b style={{ fontWeight: 600 }}>{p.title}</b> <span className="small muted">· proje hedefi</span></Link></div>
             ))}
-            {(upcoming.data?.oppDates ?? []).filter((d) => d.opportunities && ['deadline', 'opening', 'delivery'].includes(d.kind)).slice(0, 4).map((d) => (
+            {(upcoming.data?.oppDates ?? []).filter((d) => d.opportunities && ['deadline', 'opening', 'delivery'].includes(d.kind)).slice(0, 3).map((d) => (
               <div key={d.id} className="it"><span className="mono" style={{ color: 'var(--lilac-500)' }}>{formatShort(d.day)}</span><span><Link to={`/firsatlar/${d.opportunity_id}`} style={{ color: 'inherit', fontWeight: 600, textDecoration: 'none' }}>{d.opportunities!.title}</Link> <span className="small muted">· {OPP_DATE_LABEL[d.kind]}{d.certainty !== 'confirmed' ? ' (kesinleşmedi)' : ''}</span></span></div>
             ))}
             {upcomingHol.map((h) => (
@@ -106,11 +201,12 @@ export default function Home() {
           </div>
         </section>
 
-        <QuickIdeas />
-        <section className="glass panel span-all">
-          <div className="panel-head"><h2>Projelerim</h2><Link className="small" to="/projeler">Tümünü gör →</Link></div>
-          {active.length === 0 ? <Empty title="Henüz proje yok"><Link to="/projeler">İlk projenizi ekleyin</Link>, görevleri ona bağlayın; ilerleme yüzdesi kendiliğinden hesaplanır.</Empty> : (
-            <div className="cards">
+        <section className="glass panel"><SocialSummary /></section>
+
+        <section className="glass panel">
+          <div className="panel-head"><h2>Projelerim</h2><Link className="small" to="/projeler">Tümü →</Link></div>
+          {active.length === 0 ? <Empty title="Henüz proje yok"><Link to="/projeler">İlk projeni ekle</Link>; ilerleme kendiliğinden hesaplanır.</Empty> : (
+            <div style={{ display: 'grid', gap: 10 }}>
               {active.map((p) => {
                 const pr = progress.data?.get(p.id);
                 return (
@@ -124,17 +220,112 @@ export default function Home() {
             </div>
           )}
         </section>
-
-        <section className="glass panel">
-          <SocialSummary />
-          <div className="panel-head" style={{ marginTop: 18 }}><h2>Yakında</h2></div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div className="soon-card"><b>Akıllı Asistan</b> · Faz 5. Yalnız sizin kayıtlarınıza dayanarak öneri yapacak.</div>
-            <div className="soon-card"><b>Zaman Makinesi</b> · Faz 5. Değişiklik geçmişi şimdiden kaydediliyor.</div>
-          </div>
-        </section>
       </div>
     </>
+  );
+}
+
+function TodoList() {
+  const all = useTasks();
+  const save = useSaveTask();
+  const complete = useCompleteTask();
+  const { openTask } = useEditors();
+  const toast = useToast();
+  const [t, setT] = useState('');
+  const today = todayKey();
+  const list = (all.data ?? []).filter((x) => !x.due_date && !x.starts_at && !x.parent_task_id && x.status !== 'cancelled'
+    && (x.status !== 'done' || (x.completed_at && dayKeyOf(x.completed_at) === today)));
+  const open = list.filter((x) => x.status !== 'done').sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+  const doneL = list.filter((x) => x.status === 'done');
+  async function add() {
+    const v = t.trim(); if (!v) return;
+    try { await save.mutateAsync({ title: v.slice(0, 200), priority: 'medium', status: 'todo' }); setT(''); } catch (x) { toast.fail(x); }
+  }
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Yapılacaklar</h2><span className="count">{open.length}</span></div>
+      <form className="row" style={{ flexWrap: 'nowrap', marginBottom: 10 }} onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <input id="todo-add" className="input" value={t} onChange={(e) => setT(e.target.value)} placeholder="Yeni yapılacak… (Enter)" />
+        <button type="submit" className="btn btn-primary icon-btn" aria-label="Ekle"><Plus size={16} /></button>
+      </form>
+      {list.length === 0 ? <p className="small muted">Liste boş. Tarihi olmayan işleri buraya yaz, yaptıkça işaretle.</p> : (
+        <div className="todo">
+          {[...open, ...doneL].map((x) => (
+            <div key={x.id} className={`todo-row${x.status === 'done' ? ' done' : ''}`}>
+              <button type="button" className={`check${x.status === 'done' ? ' on' : ''}`} aria-label="İşaretle" onClick={async () => { try { await complete.mutateAsync({ id: x.id, done: x.status !== 'done' }); } catch (e) { toast.fail(e); } }}>{x.status === 'done' && <Check size={14} strokeWidth={3} />}</button>
+              <button type="button" className="todo-t" onClick={() => openTask(x)}><i className={`dot p-${x.priority}`} />{x.title}</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="row" style={{ marginTop: 8 }}>
+        <Link className="small" to="/gorevler">Tüm görevler →</Link>
+        {open.length > 0 && <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={async () => { try { await save.mutateAsync({ id: open[0].id, title: open[0].title, due_date: today }); toast.ok('İlk iş bugüne alındı'); } catch (e) { toast.fail(e); } }}>İlkini bugüne al</button>}
+      </div>
+    </section>
+  );
+}
+
+function FocusTimer({ title }: { title?: string }) {
+  const [end, setEnd] = useState<number | null>(null);
+  const [left, setLeft] = useState(25 * 60);
+  const toast = useToast();
+  const doneRef = useRef(false);
+  useEffect(() => {
+    if (end == null) return;
+    doneRef.current = false;
+    const t = setInterval(() => {
+      const l = Math.max(0, Math.round((end - Date.now()) / 1000));
+      setLeft(l);
+      if (l === 0 && !doneRef.current) { doneRef.current = true; setEnd(null); setLeft(25 * 60); toast.ok('Odak süresi bitti, mola ver ☕'); }
+    }, 500);
+    return () => clearInterval(t);
+  }, [end]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mm = String(Math.floor(left / 60)).padStart(2, '0'), ss = String(left % 60).padStart(2, '0');
+  return (
+    <section className="glass panel focus">
+      <div className="panel-head"><h2>Odak <Timer size={16} color="var(--rose-500)" /></h2></div>
+      <div className="focus-t mono">{mm}:{ss}</div>
+      <p className="small muted" style={{ textAlign: 'center', margin: '0 0 10px' }}>{title ? `Odak: ${title}` : '25 dk kesintisiz çalış, sonra mola'}</p>
+      <div className="row" style={{ justifyContent: 'center' }}>
+        {end == null
+          ? <button type="button" className="btn btn-primary btn-sm" onClick={() => setEnd(Date.now() + left * 1000)}><Play size={14} />Başlat</button>
+          : <button type="button" className="btn btn-glass btn-sm" onClick={() => { setEnd(null); }}><Pause size={14} />Duraklat</button>}
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setEnd(null); setLeft(25 * 60); }}><RotateCcw size={14} />Sıfırla</button>
+      </div>
+    </section>
+  );
+}
+
+function IdeasCard() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const ideas = useIdeas();
+  const [t, setT] = useState('');
+  const recent = (ideas.data ?? []).filter((i) => i.status !== 'archived').slice(0, 5);
+  async function save() {
+    const v = t.trim(); if (!v) return;
+    const [first, ...rest] = v.split('\n');
+    const { error } = await supabase.from('ideas').insert({ title: first.slice(0, 200), body: rest.join('\n').trim() || null, category: 'art' });
+    if (error) return toast.fail(error);
+    setT(''); qc.invalidateQueries({ queryKey: ['ideas'] }); toast.ok('Fikir kaydedildi ✦');
+  }
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Aklımdakiler</h2><Link className="small" to="/fikirler">Tüm fikirler →</Link></div>
+      <textarea id="qi" className="textarea" style={{ minHeight: 70 }} value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} placeholder="Aklına gelen her şeyi yaz… (⌘+Enter kaydeder)" />
+      <button type="button" className="btn btn-primary btn-sm" style={{ margin: '8px 0 12px' }} onClick={save}>Fikri kaydet</button>
+      {recent.length === 0 ? <p className="small muted">Henüz fikir yok.</p> : (
+        <div className="idea-list">
+          {recent.map((i) => (
+            <Link key={i.id} to="/fikirler" className="idea-it">
+              <b>{i.title}</b>
+              <span className="small muted">{IDEA_CATEGORY_LABEL[i.category]} · {formatRelative(dayKeyOf(i.created_at))}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -174,28 +365,3 @@ function SocialSummary() {
   );
 }
 
-function QuickIdeas() {
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [t, setT] = useState('');
-  const overdue = useOverdue().data?.length ?? 0;
-  const today = todayKey();
-  const up = useCalendarRange(today, addDays(today, 7)).data;
-  const dl = up?.oppDates?.find((d) => d.kind === 'deadline');
-  const tip = overdue ? `${overdue} bekleyen görevin var; önce onları bugüne al ya da ertele.` : dl ? `${dl.opportunities?.title} için son başvuru ${formatShort(dl.day)}. Hazırlık görevlerine bak.` : 'Takvimin bu hafta sakin; yeni bir fikri projeye dönüştürmek için iyi zaman.';
-  async function save() {
-    const v = t.trim(); if (!v) return;
-    const [first, ...rest] = v.split('\n');
-    const { error } = await supabase.from('ideas').insert({ title: first.slice(0, 200), body: rest.join('\n').trim() || null, category: 'art' });
-    if (error) return toast.fail(error);
-    setT(''); qc.invalidateQueries({ queryKey: ['ideas'] }); toast.ok('Fikir kaydedildi ✦');
-  }
-  return (
-    <section className="glass panel">
-      <div className="panel-head"><h2>Aklımdakiler</h2><Link className="small" to="/fikirler">Tüm fikirler →</Link></div>
-      <p className="small" style={{ marginTop: 0, color: 'var(--rose-600)' }}>✦ {tip}</p>
-      <textarea id="qi" className="textarea" style={{ minHeight: 110 }} value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} placeholder="Aklına gelen her şeyi yaz… (ilk satır başlık · ⌘+Enter kaydeder)" />
-      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={save}>Fikri kaydet</button>
-    </section>
-  );
-}
