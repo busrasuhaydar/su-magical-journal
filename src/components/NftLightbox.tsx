@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckSquare, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, Expand, FilePlus2, Lightbulb, Share2, X } from 'lucide-react';
 import { useProjects } from '../lib/data';
-import { artKey, projectSlug, saveOriginal, shareOriginal, useArtworkPages, type Nft } from '../lib/nft';
+import { artKey, copyImage, projectSlug, saveOriginal, shareOriginal, useArtworkPages, type Nft } from '../lib/nft';
 import { supabase } from '../lib/supabase';
 import { useEditors } from './Editors';
 import { useToast } from './ui';
@@ -115,6 +115,7 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
   const src = failed || !n.original ? n.thumb : n.original;
   const detail = [n.name, n.description, n.opensea, n.superrare].filter(Boolean).join('\n\n');
   async function save(video = false) { setBusy('save'); const r = await saveOriginal(n, video); toast.ok(r === 'saved' ? 'Orijinal dosya indirildi' : 'Orijinal yeni sekmede açıldı'); setBusy(''); }
+  async function copyImg() { setBusy('img'); try { await copyImage(n); toast.ok('Görsel kopyalandı: Cmd+V ile yapıştır'); } catch (x) { toast.fail(x); } setBusy(''); }
   async function share() { setBusy('share'); try { const r = await shareOriginal(n); toast.ok(r === 'sheet' ? 'Paylaş menüsü açıldı' : 'Orijinal indirildi; X penceresinde görseli ekle'); } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); } setBusy(''); }
   return (
     <div className="lb" role="dialog" aria-modal="true" aria-label={n.name}>
@@ -136,6 +137,7 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
           <div className="lb-actions">
             <div className="row" style={{ gap: 6 }}>
               <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => save()}><Download size={13} />{busy === 'save' ? 'İniyor…' : 'Orijinali kaydet'}</button>
+              <button type="button" className="btn btn-copy btn-sm" disabled={!!busy} onClick={copyImg}><Copy size={13} />{busy === 'img' ? 'Kopyalanıyor…' : 'Görseli kopyala (Cmd+V)'}</button>
               <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={share}><Share2 size={13} />{busy === 'share' ? 'Hazırlanıyor…' : 'Tweet / paylaş'}</button>
               {n.video && <button type="button" className="btn btn-glass btn-sm" onClick={() => save(true)}><Download size={13} />Video</button>}
             </div>

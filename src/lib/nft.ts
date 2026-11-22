@@ -80,3 +80,18 @@ export async function shareOriginal(n: Nft): Promise<'sheet' | 'intent'> {
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(n.name)}&url=${encodeURIComponent(n.superrare ?? n.opensea)}`, '_blank');
   return 'intent';
 }
+
+/** Orijinal görseli panoya koyar (Cmd+V ile X/Instagram'a yapıştırılır). Tarayıcı yalnız PNG kabul ettiği için gerekirse PNG'ye çevrilir. */
+export async function copyImage(n: Nft): Promise<void> {
+  if (!navigator.clipboard || typeof ClipboardItem === 'undefined') throw new Error('Bu tarayıcı panoya görsel koyamıyor');
+  const item = new ClipboardItem({ 'image/png': (async () => {
+    const { blob } = await fetchOriginal(n);
+    if (blob.type === 'image/png') return blob;
+    if (!blob.type.startsWith('image/') || blob.type === 'image/gif') throw new Error('Bu dosya türü panoya kopyalanamaz; Orijinali kaydet\'i kullan');
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d')!.drawImage(bmp, 0, 0);
+    return new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Görsel hazırlanamadı'))), 'image/png'));
+  })() });
+  await navigator.clipboard.write([item]);
+}

@@ -140,7 +140,15 @@ function NftPane() {
         <span className="count">{list.length}</span>
         <span className="small muted">Orijinaller yerinde durur. Bir esere tıkla: orijinali kaydet, tweetle, notlarını yaz.</span>
       </div>
-      {list.length === 0 ? <Empty title="Eser yok">Aramayı değiştir.</Empty> : <div className="nft-grid">{list.map((n, i) => <Card key={nftKey(n)} n={n} onOpen={() => setLb(i)} />)}</div>}
+      {list.length === 0 ? <Empty title="Eser yok">Aramayı değiştir.</Empty> : (nfts.data?.collections ?? []).map((c) => {
+        const own = list.map((n, i) => [n, i] as const).filter(([n]) => n.c === c.slug);
+        return own.length === 0 ? null : (
+          <div key={c.slug} style={{ marginBottom: 22 }}>
+            <h3 style={{ marginBottom: 10 }}>{c.name} <span className="count">{own.length}</span></h3>
+            <div className="nft-grid">{own.map(([n, i]) => <Card key={nftKey(n)} n={n} onOpen={() => setLb(i)} />)}</div>
+          </div>
+        );
+      })}
       {lb != null && <Lightbox items={list} index={lb} setIndex={setLb} onClose={() => setLb(null)} />}
     </section>
   );
