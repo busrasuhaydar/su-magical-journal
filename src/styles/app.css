@@ -556,7 +556,7 @@ h1 { font-size: 36px; } h2 { font-size: 25px; } h3 { font-size: 19px; }
 .glass {
   background: var(--lg-fill);
   backdrop-filter: blur(26px) saturate(2) brightness(1.06); -webkit-backdrop-filter: blur(26px) saturate(2) brightness(1.06);
-  border: 0; border-radius: 30px; box-shadow: var(--lg-edge), var(--lg-drop); overflow: hidden;
+  border: 0; border-radius: 30px; box-shadow: var(--lg-edge), var(--lg-drop);
 }
 .glass::before {
   background:
@@ -632,3 +632,5 @@ h1 { font-size: 36px; } h2 { font-size: 25px; } h3 { font-size: 19px; }
   .glass, .card, .dialog, .tabbar, .bulkbar { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,250,253,.95); }
 }
 @media (prefers-reduced-motion: reduce) { .btn, .task-row, .nav a { transition: none; } }
+
+.sidebar { overflow-y: auto; overflow-x: hidden; }
