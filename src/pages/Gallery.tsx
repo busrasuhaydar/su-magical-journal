@@ -138,17 +138,27 @@ function NftPane() {
         </select>
         <input className="input" style={{ width: 220 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Eser ara…" />
         <span className="count">{list.length}</span>
-        <span className="small muted">Orijinaller yerinde durur. Bir esere tıkla: orijinali kaydet, tweetle, notlarını yaz.</span>
+        <span className="small muted">Bir koleksiyona tıkla; eserde orijinali kaydet, tweetle, not yaz.</span>
       </div>
-      {list.length === 0 ? <Empty title="Eser yok">Aramayı değiştir.</Empty> : (nfts.data?.collections ?? []).map((c) => {
-        const own = list.map((n, i) => [n, i] as const).filter(([n]) => n.c === c.slug);
-        return own.length === 0 ? null : (
-          <div key={c.slug} style={{ marginBottom: 22 }}>
-            <h3 style={{ marginBottom: 10 }}>{c.name} <span className="count">{own.length}</span></h3>
-            <div className="nft-grid">{own.map(([n, i]) => <Card key={nftKey(n)} n={n} onOpen={() => setLb(i)} />)}</div>
-          </div>
-        );
-      })}
+      {!col && !q.trim() ? (
+        <div className="col-grid">
+          {(nfts.data?.collections ?? []).map((c) => {
+            const l = (nfts.data?.items ?? []).filter((n) => n.c === c.slug);
+            const pv = [0, 1, 2, 3].map((k) => l[Math.floor((l.length / 4) * k)]).filter(Boolean);
+            return (
+              <button type="button" key={c.slug} className="col-card glass" style={{ textAlign: 'left', cursor: 'pointer', border: 0 }} onClick={() => setCol(c.slug)}>
+                <div className={`mosaic m${pv.length}`}>{pv.map((p) => <img key={nftKey(p)} src={p.thumb ?? ''} alt="" loading="lazy" />)}</div>
+                <div className="col-meta"><h3>{c.name}</h3><span className="small muted">{l.length} eser</span></div>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          {col && <div className="row" style={{ marginBottom: 12 }}><button type="button" className="btn btn-glass btn-sm" onClick={() => setCol('')}>← Tüm koleksiyonlar</button><h3>{nfts.data?.collections.find((c) => c.slug === col)?.name}</h3></div>}
+          {list.length === 0 ? <Empty title="Eser yok">Aramayı değiştir.</Empty> : <div className="nft-grid">{list.map((n, i) => <Card key={nftKey(n)} n={n} onOpen={() => setLb(i)} />)}</div>}
+        </>
+      )}
       {lb != null && <Lightbox items={list} index={lb} setIndex={setLb} onClose={() => setLb(null)} />}
     </section>
   );
