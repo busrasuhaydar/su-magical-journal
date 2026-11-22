@@ -8,6 +8,8 @@ import { addToGallery, softDeleteFiles, uploadFile, useFileLinks, useFiles, useP
 import { BulkBar, ProjectPickDialog, SelectTile, Thumb } from '../components/Media';
 import { dayKeyOf, formatShort } from '../lib/dates';
 import type { FileRec } from '../lib/types';
+import { Card, Lightbox, nftKey } from '../components/NftLightbox';
+import { useNfts } from '../lib/nft';
 
 export default function CommonGallery() {
   const files = useFiles();
@@ -30,7 +32,7 @@ export default function CommonGallery() {
     const ls = (links.data ?? []).filter((l) => l.file_id === id);
     return { journal: ls.some((l) => l.entity_type === 'journal_day'), post: ls.some((l) => l.entity_type === 'social_post') };
   };
-  const list = useMemo(() => (files.data ?? []).filter((f) => visual(f) && (!kind || f.mime.startsWith(kind)) &&
+  const list = useMemo(() => (files.data ?? []).filter((f) => visual(f) && (!kind || kind === 'nft' || f.mime.startsWith(kind)) &&
     (!proj || (proj === 'none' ? projOf(f.id).length === 0 : projOf(f.id).includes(proj)))), [files.data, links.data, proj, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = (id: string) => setSel((x) => (x.includes(id) ? x.filter((i) => i !== id) : [...x, id]));
@@ -52,13 +54,14 @@ export default function CommonGallery() {
           <option value="">Tüm görseller</option><option value="none">Projeye bağlı olmayanlar</option>
           {projects.data?.map((p) => <option key={p.id} value={p.id}>{p.icon ?? '✦'} {p.title}</option>)}
         </select>
-        <div className="seg">{[['', 'Tümü'], ['image/', 'Görsel'], ['video/', 'Video']].map(([k, l]) => <button type="button" key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{l}</button>)}</div>
+        <div className="seg">{[['', 'Tümü'], ['image/', 'Görsel'], ['video/', 'Video'], ['nft', 'NFT eserleri']].map(([k, l]) => <button type="button" key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{l}</button>)}</div>
         <button type="button" className={`btn ${selMode ? 'btn-primary' : 'btn-glass'}`} onClick={() => (selMode ? endSel() : setSelMode(true))}><CheckSquare size={15} />{selMode ? 'Seçimi bitir' : 'Seç'}</button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={() => input.current?.click()}><Upload size={15} />{busy ? 'Yükleniyor…' : 'Cihazdan yükle'}</button>
         <input ref={input} id="cg-in" type="file" multiple hidden accept="image/*,video/*" onChange={(e) => { onFiles(e.target.files); e.target.value = ''; }} />
       </PageHead>
       <p className="small muted" style={{ margin: 0 }}>Projelerdeki, günlükteki ve paylaşımlardaki bütün görseller burada. Bir görseli birden çok projeye bağlayabilirsiniz; kopya oluşmaz.{proj && proj !== 'none' ? ' Yüklediğiniz görseller seçili projeye de eklenir.' : ''}</p>
-      <section className="glass panel" onDragOver={(e: DragEvent) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={(e: DragEvent) => { e.preventDefault(); setOver(false); onFiles(e.dataTransfer.files); }}>
+      {kind === 'nft' && <NftPane />}
+      <section className="glass panel" hidden={kind === 'nft'} onDragOver={(e: DragEvent) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={(e: DragEvent) => { e.preventDefault(); setOver(false); onFiles(e.dataTransfer.files); }}>
         {over && <div className="dropzone over" style={{ marginBottom: 12 }}>Bırakın, galeriye eklensin</div>}
         {!files.isLoading && list.length === 0 ? <Empty title="Görsel yok">Görselleri buraya sürükleyin veya Yükle’ye basın.</Empty> : (
           <div className="pgal">
@@ -116,5 +119,29 @@ function Viewer({ file, projectIds, onClose }: { file: FileRec; projectIds: stri
           onPick={async (p) => { try { await addToGallery(file.id, p.id); qc.invalidateQueries({ queryKey: ['files'] }); toast.ok(`${p.title} galerisine eklendi`); setAdd(false); } catch (x) { toast.fail(x); } }} />}
       </div>
     </div>
+  );
+}
+
+/** NFT eserleri: orijinaller dış depolamada (IPFS/Arweave) durur; burada yalnız bağlantı olarak görünür, kopya/depolama yükü yoktur. */
+function NftPane() {
+  const nfts = useNfts();
+  const [col, setCol] = useState('');
+  const [q, setQ] = useState('');
+  const [lb, setLb] = useState<number | null>(null);
+  const list = useMemo(() => (nfts.data?.items ?? []).filter((n) => (!col || n.c === col) && (!q.trim() || `${n.name} ${n.description}`.toLocaleLowerCase('tr').includes(q.trim().toLocaleLowerCase('tr')))), [nfts.data, col, q]);
+  return (
+    <section className="glass panel">
+      <div className="row" style={{ marginBottom: 12 }}>
+        <select className="select" style={{ width: 'auto' }} value={col} onChange={(e) => setCol(e.target.value)}>
+          <option value="">Tüm koleksiyonlar</option>
+          {nfts.data?.collections.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+        </select>
+        <input className="input" style={{ width: 220 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Eser ara…" />
+        <span className="count">{list.length}</span>
+        <span className="small muted">Orijinaller yerinde durur. Bir esere tıkla: orijinali kaydet, tweetle, notlarını yaz.</span>
+      </div>
+      {list.length === 0 ? <Empty title="Eser yok">Aramayı değiştir.</Empty> : <div className="nft-grid">{list.map((n, i) => <Card key={nftKey(n)} n={n} onOpen={() => setLb(i)} />)}</div>}
+      {lb != null && <Lightbox items={list} index={lb} setIndex={setLb} onClose={() => setLb(null)} />}
+    </section>
   );
 }

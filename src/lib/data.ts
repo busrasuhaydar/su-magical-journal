@@ -454,7 +454,7 @@ export function usePages(projectId: string) {
   return useQuery({ queryKey: ['pages', projectId], queryFn: () => run<Page[]>(supabase.from('pages').select('*').eq('project_id', projectId).is('deleted_at', null).order('position')) });
 }
 export function useAllPages() {
-  return useQuery({ queryKey: ['pages', 'all'], queryFn: () => run<Page[]>(supabase.from('pages').select('id,project_id,title,icon,parent_id,position,updated_at').is('deleted_at', null)) });
+  return useQuery({ queryKey: ['pages', 'all'], queryFn: () => run<Page[]>(supabase.from('pages').select('id,project_id,title,icon,parent_id,position,updated_at,artwork_key').is('deleted_at', null)) });
 }
 export function usePageBlocks(pageId: string | null) {
   return useQuery({ queryKey: ['blocks', pageId], enabled: !!pageId, queryFn: () => run<PageBlock[]>(supabase.from('page_blocks').select('*').eq('page_id', pageId!).order('position')) });

@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { useAllPages, useContacts, useIdeas, useOpportunities, usePosts, useProjects, useTasks } from '../lib/data';
 import { dayKeyOf, formatRelative, todayKey } from '../lib/dates';
 import { useEditors } from './Editors';
+import { useNfts } from '../lib/nft';
 
 type Item = { group: string; label: string; hint?: string; icon: string; run: () => void };
 const norm = (s: string) => s.toLocaleLowerCase('tr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i');
@@ -27,6 +28,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const nav = useNavigate();
   const { openTask, openPost, openEvent } = useEditors();
   const projects = useProjects(), pages = useAllPages(), tasks = useTasks(), posts = usePosts(), contacts = useContacts(), opps = useOpportunities(), ideas = useIdeas();
+  const nfts = useNfts();
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -39,7 +41,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     { group: 'Hızlı işlemler', label: 'Yeni içerik (sosyal medya)', icon: '✦', run: act(() => openPost({})) },
     { group: 'Hızlı işlemler', label: 'Yeni etkinlik', icon: '◷', run: act(() => openEvent({})) },
     ...[['Ana Sayfa', '/'], ['Bugün', `/gun/${todayKey()}`], ['Takvim', '/takvim/yil'], ['Görevler', '/gorevler'], ['Projelerim', '/projeler'], ['Sosyal Medya', '/sosyal'],
-      ['Sergiler ve Fırsatlar', '/firsatlar'], ['Kişiler', '/kisiler'], ['Fikirler', '/fikirler'], ['Ortak Galeri', '/galeri'], ['Dosyalar', '/dosyalar'], ['Ayarlar', '/ayarlar']]
+      ['Sergiler ve Fırsatlar', '/firsatlar'], ['Kişiler', '/kisiler'], ['Fikirler', '/fikirler'], ['Ortak Galeri', '/galeri'], ['Koleksiyonlarım', '/koleksiyonlar'], ['Dosyalar', '/dosyalar'], ['Ayarlar', '/ayarlar']]
       .map(([l, to]) => ({ group: 'Git', label: l, icon: '→', run: go(to) })),
     ...(projects.data ?? []).map((p) => ({ group: 'Projeler', label: p.title, icon: p.icon ?? '✦', run: go(`/projeler/${p.slug}`) })),
     ...(pages.data ?? []).map((pg) => { const p = projects.data?.find((x) => x.id === pg.project_id); return { group: 'Sayfalar', label: pg.title, hint: p?.title, icon: pg.icon ?? '📄', run: go(`/projeler/${p?.slug}/sayfalar/${pg.id}`) }; }),
@@ -47,8 +49,10 @@ function Palette({ onClose }: { onClose: () => void }) {
     ...(posts.data ?? []).map((p) => ({ group: 'İçerikler', label: p.title, hint: p.scheduled_at ? formatRelative(dayKeyOf(p.scheduled_at)) : undefined, icon: '✦', run: act(() => openPost(p)) })),
     ...(opps.data ?? []).map((o) => ({ group: 'Fırsatlar', label: o.title, hint: o.organization ?? undefined, icon: '🏛', run: go(`/firsatlar/${o.id}`) })),
     ...(contacts.data ?? []).map((c) => ({ group: 'Kişiler', label: c.name, hint: c.organization ?? undefined, icon: '☺', run: go('/kisiler') })),
+    ...(nfts.data?.items ?? []).map((n) => ({ group: 'NFT eserleri', label: n.name, hint: nfts.data!.collections.find((c) => c.slug === n.c)?.name, icon: '🖼️', run: go(`/koleksiyonlar/${n.c}?eser=${n.contract.slice(0, 10).toLowerCase()}-${n.tokenId}`) })),
+    ...(nfts.data?.collections ?? []).map((c) => ({ group: 'Koleksiyonlar', label: c.name, icon: '🖼️', run: go(`/koleksiyonlar/${c.slug}`) })),
     ...(ideas.data ?? []).map((i) => ({ group: 'Fikirler', label: i.title, icon: '💡', run: go('/fikirler') })),
-  ], [projects.data, pages.data, tasks.data, posts.data, opps.data, contacts.data, ideas.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  ], [projects.data, pages.data, tasks.data, posts.data, opps.data, contacts.data, ideas.data, nfts.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const results = useMemo(() => {
     const n = norm(q.trim());

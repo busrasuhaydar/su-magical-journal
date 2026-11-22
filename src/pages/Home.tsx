@@ -10,6 +10,7 @@ import { ensureJournalDay, useCalendarRange, useCompleteTask, useHolidays, useId
 import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, startOfWeek, todayKey, formatShort } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { flag } from '../lib/countries';
+import { shareOriginal, useNfts } from '../lib/nft';
 import { IDEA_CATEGORY_LABEL, OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform, type Task } from '../lib/types';
 import { EVENT_KIND_LABEL, PRIORITY_ORDER, PROJECT_STATUS_LABEL } from '../lib/types';
 
@@ -162,7 +163,7 @@ export default function Home() {
           <FocusTimer title={focus?.title} />
         </div>
 
-        <IdeasCard />
+        <div className="col"><ArtOfTheDay /><IdeasCard /></div>
 
         <section className="glass panel span-all">
           <div className="panel-head"><h2>Bu hafta</h2><Link className="small" to="/takvim/hafta">Takvim →</Link></div>
@@ -365,3 +366,27 @@ function SocialSummary() {
   );
 }
 
+
+function ArtOfTheDay() {
+  const nfts = useNfts();
+  const toast = useToast();
+  const [shift, setShift] = useState(0);
+  const items = nfts.data?.items ?? [];
+  if (!items.length) return null;
+  const day = Math.floor(Date.now() / 86_400_000);
+  const n = items[(day * 7 + shift * 13) % items.length];
+  const col = nfts.data!.collections.find((c) => c.slug === n.c);
+  const to = `/koleksiyonlar/${n.c}?eser=${n.contract.slice(0, 10).toLowerCase()}-${n.tokenId}`;
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Günün eseri</h2><button type="button" className="btn btn-ghost btn-sm" onClick={() => setShift((x) => x + 1)}>Başka</button></div>
+      <Link to={to} className="aotd">{n.thumb && <img src={n.thumb} alt={n.name} />}</Link>
+      <b style={{ display: 'block', marginTop: 8 }}>{n.name}</b>
+      <span className="small muted">{col?.name}</span>
+      <div className="row" style={{ marginTop: 8, gap: 6 }}>
+        <Link className="btn btn-primary btn-sm" to={to}>Aç · fikir yaz</Link>
+        <button type="button" className="btn btn-glass btn-sm" onClick={async () => { try { await shareOriginal(n); } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); } }}>Tweet / paylaş</button>
+      </div>
+    </section>
+  );
+}
