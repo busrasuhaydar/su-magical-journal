@@ -30,3 +30,9 @@ Kişisel yaşam + sanat kariyeri + proje yönetimi uygulaması. Arayüz tamamen 
 - Sosyal paylaşım şu an elle: `src/lib/share.ts` (paylaş menüsü / X intent); paylaşımlar `post_shares`'e kaydedilir. API ile otomatik yayın altyapısı hazır ama anahtarlar girilmedi.
 - Belirsiz bilgi uydurulmaz; dinî bayramlar `certainty='uncertain'`.
 - Kullanıcıya Türkçe, kısa yanıt ver; token tasarrufu önemli.
+
+## Token tasarrufu (önemli)
+- İstenmedikçe kod tabanını keşfetme; CLAUDE.md'deki yapıya güven, yalnız ilgili dosyayı oku (gerekirse `grep -n` ile ilgili satırları).
+- İstenmedikçe tarayıcı testi, ekran görüntüsü, uzun log okuma yapma. Kontrol = `npx tsc -p tsconfig.json`.
+- Yayın: değişikliği `main`'e commit + push (Actions kendiliğinden yayınlar).
+- Yanıtlar kısa olsun.
