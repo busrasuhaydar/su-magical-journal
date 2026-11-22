@@ -23,6 +23,7 @@ export function PagesTab({ p, initialPage, onOpenPage }: { p: Project; initialPa
   const toast = useToast();
   const sel = initialPage && pages.data?.some((x) => x.id === initialPage) ? initialPage : null;
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [newOpen, setNewOpen] = useState(false);
 
   async function create(parent: string | null, title = 'Adsız sayfa', icon = '📄') {
     const siblings = (pages.data ?? []).filter((x) => x.parent_id === parent);
@@ -53,11 +54,11 @@ export function PagesTab({ p, initialPage, onOpenPage }: { p: Project; initialPa
   return (
     <div className="pages-layout">
       <aside className="glass panel pages-tree">
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Sayfalar</b><button type="button" className="btn btn-glass btn-sm" onClick={() => create(null)}><FilePlus2 size={13} />Yeni</button></div>
-        {pages.data?.length === 0 && (
-          <div style={{ display: 'grid', gap: 6 }}>
-            <p className="small muted" style={{ margin: 0 }}>Hazır başlıklarla başlayın:</p>
-            {TEMPLATES.map((t, i) => <button type="button" key={t} className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => create(null, t, ICONS[i + 1])}>{ICONS[i + 1]} {t}</button>)}
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Sayfalar</b><button type="button" className={`btn btn-sm ${newOpen ? 'btn-primary' : 'btn-glass'}`} aria-expanded={newOpen} onClick={() => setNewOpen((o) => !o)}><FilePlus2 size={13} />Yeni</button></div>
+        {newOpen && (
+          <div className="new-menu">
+            <button type="button" className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => { setNewOpen(false); create(null); }}>📄 Boş sayfa</button>
+            {TEMPLATES.map((t, i) => <button type="button" key={t} className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => { setNewOpen(false); create(null, t, ICONS[i + 1]); }}>{ICONS[i + 1]} {t}</button>)}
           </div>
         )}
         <Tree pid={null} depth={0} />
