@@ -46,6 +46,7 @@ function App() {
           <Route path="kisiler" element={<ContactsPage />} />
           <Route path="fikirler" element={<IdeasPage />} />
           <Route path="koleksiyonlar" element={<NftCollectionsPage />} />
+          <Route path="koleksiyonlar/:slug" element={<NftCollectionsPage />} />
           <Route path="galeri" element={<CommonGallery />} />
           <Route path="dosyalar" element={<FilesPage />} />
           <Route path="ayarlar" element={<SettingsPage />} />
