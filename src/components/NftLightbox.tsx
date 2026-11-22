@@ -23,8 +23,8 @@ export function LinkRow({ label, url, compact }: { label: string; url: string; c
   const copy = useCopy();
   return (
     <div className="lrow" onClick={(e) => e.stopPropagation()}>
-      <a className={`btn btn-glass btn-sm${compact ? ' lr-a' : ''}`} href={url} target="_blank" rel="noreferrer">{label}<ExternalLink size={12} /></a>
-      <button type="button" className="btn btn-copy btn-sm" aria-label={`${label} linkini kopyala`} title="Linki kopyala" onClick={() => copy(url, `${label} linki`)}><Copy size={13} />Kopyala</button>
+      <a className={`btn btn-glass btn-sm${compact ? ' lr-a' : ''}`} href={url} target="_blank" rel="noreferrer" title={`${label}'de aç`}>{label === 'OpenSea' ? 'OS' : 'SR'}<ExternalLink size={12} /></a>
+      <button type="button" className="btn btn-copy btn-sm icon-only" aria-label={`${label} linkini kopyala`} title={`${label} linkini kopyala`} onClick={() => copy(url, `${label} linki`)}><Copy size={14} /></button>
     </div>
   );
 }
@@ -65,7 +65,7 @@ function Workbench({ n }: { n: Nft }) {
       { page_id: data.id, type: 'text', content: { text: '' }, position: 4 },
     ]);
     qc.invalidateQueries({ queryKey: ['pages'] });
-    nav(`/projeler/${project.slug}/sayfalar/${data.id}`);
+    nav(`/koleksiyonlar/${n.c}?sekme=sayfalar&sayfa=${data.id}`);
   }
   async function saveIdea() {
     const v = idea.trim(); if (!v) return;
@@ -81,7 +81,7 @@ function Workbench({ n }: { n: Nft }) {
         <button type="button" className="btn btn-glass btn-sm" onClick={() => openTask({ title: `${n.name}: `, project_id: project?.id ?? null, due_date: null })}><CheckSquare size={13} />Görev ekle</button>
         {project && <Link className="btn btn-glass btn-sm" to={`/projeler/${project.slug}`}>Proje</Link>}
       </div>
-      {pages.length > 0 && <div className="row" style={{ gap: 6 }}>{pages.map((pg) => <Link key={pg.id} className="chip chip-on-soft" to={`/projeler/${project?.slug}/sayfalar/${pg.id}`}>{pg.icon ?? '📄'} {pg.title}</Link>)}</div>}
+      {pages.length > 0 && <div className="row" style={{ gap: 6 }}>{pages.map((pg) => <Link key={pg.id} className="chip chip-on-soft" to={`/koleksiyonlar/${n.c}?sekme=sayfalar&sayfa=${pg.id}`}>{pg.icon ?? '📄'} {pg.title}</Link>)}</div>}
       <textarea className="textarea" style={{ minHeight: 60 }} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="Bu eser için aklına gelen fikir… (⌘+Enter kaydeder)" onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveIdea(); }} />
       <button type="button" className="btn btn-glass btn-sm" style={{ justifySelf: 'start' }} onClick={saveIdea}><Lightbulb size={13} />Fikir olarak kaydet</button>
     </div>
@@ -142,12 +142,12 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
               {n.video && <button type="button" className="btn btn-glass btn-sm" onClick={() => save(true)}><Download size={13} />Video</button>}
             </div>
             <div className="lb-grp"><span className="small muted">OpenSea</span>
-              <div className="row" style={{ gap: 6 }}><a className="btn btn-glass btn-sm" href={n.opensea} target="_blank" rel="noreferrer">OpenSea'de aç <ExternalLink size={13} /></a><button type="button" className="btn btn-copy btn-sm" onClick={() => copy(n.opensea, 'OpenSea linki')}><Copy size={13} />Linki kopyala</button></div></div>
+              <div className="row" style={{ gap: 6 }}><a className="btn btn-glass btn-sm" href={n.opensea} target="_blank" rel="noreferrer" title="OpenSea'de aç">OS <ExternalLink size={13} /></a><button type="button" className="btn btn-copy btn-sm icon-only" title="OpenSea linkini kopyala" aria-label="OpenSea linkini kopyala" onClick={() => copy(n.opensea, 'OpenSea linki')}><Copy size={14} /></button></div></div>
             {n.superrare && <div className="lb-grp"><span className="small muted">SuperRare</span>
-              <div className="row" style={{ gap: 6 }}><a className="btn btn-glass btn-sm" href={n.superrare} target="_blank" rel="noreferrer">SuperRare'de aç <ExternalLink size={13} /></a><button type="button" className="btn btn-copy btn-sm" onClick={() => copy(n.superrare!, 'SuperRare linki')}><Copy size={13} />Linki kopyala</button></div></div>}
+              <div className="row" style={{ gap: 6 }}><a className="btn btn-glass btn-sm" href={n.superrare} target="_blank" rel="noreferrer" title="SuperRare'de aç">SR <ExternalLink size={13} /></a><button type="button" className="btn btn-copy btn-sm icon-only" title="SuperRare linkini kopyala" aria-label="SuperRare linkini kopyala" onClick={() => copy(n.superrare!, 'SuperRare linki')}><Copy size={14} /></button></div></div>}
             <div className="row" style={{ gap: 6 }}>
               {n.original && <a className="btn btn-glass btn-sm" href={n.original} target="_blank" rel="noreferrer"><Expand size={13} />Orijinal bağlantı</a>}
-              <button type="button" className="btn btn-copy btn-sm" onClick={() => copy(detail, 'Ad ve açıklama')}><Copy size={13} />Ad + açıklama</button>
+              <button type="button" className="btn btn-copy btn-sm icon-only" title="Ad + açıklamayı kopyala" aria-label="Ad ve açıklamayı kopyala" onClick={() => copy(detail, 'Ad ve açıklama')}><Copy size={14} /></button>
             </div>
             <Workbench key={nftKey(n)} n={n} />
           </div>

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, FolderOpen, Search, Shuffle } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Search, Shuffle } from 'lucide-react';
+import { PagesTab } from './project/Pages';
+import { useProjects } from '../lib/data';
 import { PageHead } from '../components/Shell';
 import { Card, Lightbox, nftKey } from '../components/NftLightbox';
 import { useEnsureCollectionProjects, useNfts, type Nft, type NftData as Data } from '../lib/nft';
@@ -36,8 +38,8 @@ function Overview({ data }: { data: Data }) {
           <input className="input" style={{ paddingLeft: 34, width: 260 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tüm eserlerde ara…" />
         </div>
         <button type="button" className="btn btn-glass btn-sm" onClick={surprise}><Shuffle size={14} />Beni şaşırt</button>
-        <a className="btn btn-glass btn-sm" href="https://opensea.io/busrasuhaydar" target="_blank" rel="noreferrer">OpenSea <ExternalLink size={13} /></a>
-        <a className="btn btn-glass btn-sm" href="https://superrare.com/busrasuhaydar" target="_blank" rel="noreferrer">SuperRare <ExternalLink size={13} /></a>
+        <a className="btn btn-glass btn-sm" href="https://opensea.io/busrasuhaydar" target="_blank" rel="noreferrer" title="OpenSea profilim">OS <ExternalLink size={13} /></a>
+        <a className="btn btn-glass btn-sm" href="https://superrare.com/busrasuhaydar" target="_blank" rel="noreferrer" title="SuperRare profilim">SR <ExternalLink size={13} /></a>
       </PageHead>
       <div className="row">
         {data.collections.map((c) => <Link key={c.slug} className="chip" to={`/koleksiyonlar/${c.slug}`}>{c.name} · {by.get(c.slug)?.length ?? 0}</Link>)}
@@ -81,6 +83,10 @@ function CollectionView({ data, slug }: { data: Data; slug: string }) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'no' | 'ad' | 'son'>('no');
   const [sp, setSp] = useSearchParams();
+  const projects = useProjects();
+  const proj = projects.data?.find((p) => p.slug === `koleksiyon-${slug}`);
+  const tab = sp.get('sekme') === 'sayfalar' ? 'sayfalar' : 'eserler';
+  const setTab = (t: string) => { const n = new URLSearchParams(sp); n.delete('eser'); n.delete('sayfa'); if (t === 'sayfalar') n.set('sekme', t); else n.delete('sekme'); setSp(n, { replace: true }); };
   const list = useMemo(() => {
     let l = data.items.filter((i) => i.c === slug);
     const t = norm(q.trim());
@@ -96,11 +102,19 @@ function CollectionView({ data, slug }: { data: Data; slug: string }) {
     <>
       <PageHead title={col.name}>
         <Link className="btn btn-glass btn-sm" to="/koleksiyonlar"><ArrowLeft size={14} />Tüm koleksiyonlar</Link>
-        <Link className="btn btn-primary btn-sm" to={`/projeler/koleksiyon-${slug}`}><FolderOpen size={14} />Proje: sayfalar, görevler</Link>
+        <Link className="btn btn-glass btn-sm" to={`/projeler/koleksiyon-${slug}`}>Proje çalışma alanı</Link>
       </PageHead>
       <div className="row">
         {data.collections.map((c) => <Link key={c.slug} className={`chip${c.slug === slug ? ' chip-on' : ''}`} to={`/koleksiyonlar/${c.slug}`}>{c.name}</Link>)}
       </div>
+      <div className="seg" style={{ justifySelf: 'start' }}>
+        <button type="button" className={tab === 'eserler' ? 'on' : ''} onClick={() => setTab('eserler')}>Eserler · {list.length}</button>
+        <button type="button" className={tab === 'sayfalar' ? 'on' : ''} onClick={() => setTab('sayfalar')}>Sayfalar ve fikirler</button>
+      </div>
+      {tab === 'sayfalar' ? (
+        proj ? <PagesTab p={proj} initialPage={sp.get('sayfa') ?? undefined} onOpenPage={(id) => { const n = new URLSearchParams(sp); if (id) n.set('sayfa', id); else n.delete('sayfa'); setSp(n, { replace: true }); }} />
+          : <p className="muted">Koleksiyon projesi hazırlanıyor…</p>
+      ) : (
       <section className="glass panel">
         {col.description && <p className="col-desc">{col.description}</p>}
         <div className="row" style={{ marginBottom: 14 }}>
@@ -113,6 +127,7 @@ function CollectionView({ data, slug }: { data: Data; slug: string }) {
         </div>
         {list.length === 0 ? <Empty title="Sonuç yok">Aramayı değiştir.</Empty> : <div className="nft-grid">{list.map((n, i) => <Card key={key(n)} n={n} onOpen={() => setOpen(i)} />)}</div>}
       </section>
+      )}
       {idx >= 0 && <Lightbox items={list} index={idx} setIndex={(i) => setOpen(i)} onClose={() => setOpen(null)} />}
     </>
   );
