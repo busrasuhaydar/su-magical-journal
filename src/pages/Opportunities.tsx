@@ -7,10 +7,11 @@ import { PageHead } from '../components/Shell';
 import { TaskRow } from '../components/TaskRow';
 import { useEditors } from '../components/Editors';
 import { ConfirmButton, Dialog, Empty, Field, useToast } from '../components/ui';
+import { MediaSources } from '../components/Media';
 import { linkFile, uploadFile, useFiles, useOppDates, useOpportunities, useProjectOpps, useProjects, useRowMutation, useSignedUrl, useTasks } from '../lib/data';
 import { supabase } from '../lib/supabase';
 import { addDays, daysBetween, formatLong, formatRelative, formatShort, todayKey } from '../lib/dates';
-import { CONFIRMED_OPP, OPP_DATE_LABEL, OPP_KIND_LABEL, OPP_STATUS_COLOR, OPP_STATUS_LABEL, type OppDate, type OppDateKind, type OppKind, type OppStatus, type Opportunity, type RequiredDoc } from '../lib/types';
+import { CONFIRMED_OPP, OPP_DATE_LABEL, OPP_KIND_LABEL, OPP_STATUS_COLOR, OPP_STATUS_LABEL, type FileRec, type OppDate, type OppDateKind, type OppKind, type OppStatus, type Opportunity, type RequiredDoc } from '../lib/types';
 
 const PIPE: OppStatus[] = ['to_review', 'potential', 'preparing', 'submitted', 'awaiting', 'accepted', 'exhibiting', 'completed', 'rejected', 'withdrawn'];
 const DATE_KINDS = Object.keys(OPP_DATE_LABEL) as OppDateKind[];
@@ -257,8 +258,6 @@ function OpportunityDetail({ id }: { id: string }) {
   const mut = useRowMutation('opportunities', ['opps']);
   const dateMut = useRowMutation('opportunity_dates', ['opps', 'cal', 'year', 'reminders']);
   const linkMut = useRowMutation('project_opportunities', ['opps']);
-  const docInput = useRef<HTMLInputElement>(null);
-  const [docIdx, setDocIdx] = useState<number | null>(null);
   const [showSrc, setShowSrc] = useState(false);
   const o = opps.data?.find((x) => x.id === id);
   const myDates = useMemo(() => (dates.data ?? []).filter((d) => d.opportunity_id === id).sort((a, b) => a.day.localeCompare(b.day)), [dates.data, id]);
@@ -275,15 +274,14 @@ function OpportunityDetail({ id }: { id: string }) {
   const docs = o.required_docs ?? [];
   const missing = docs.filter((d) => !d.done);
 
-  async function attachDoc(fl: FileList | null) {
-    if (!fl?.[0] || docIdx == null) return;
+  async function attachDoc(input: File[] | FileRec[], idx: number) {
+    if (!input[0]) return;
     try {
-      const { rec } = await uploadFile(fl[0]);
+      const first = input[0]; const rec = first instanceof File ? (await uploadFile(first)).rec : first;
       if (myProjects[0]) await linkFile(rec.id, 'project', myProjects[0].project_id);
-      upd({ required_docs: docs.map((d, i) => (i === docIdx ? { ...d, done: true, file_id: rec.id } : d)) });
+      upd({ required_docs: docs.map((d, i) => (i === idx ? { ...d, done: true, file_id: rec.id } : d)) });
       qc.invalidateQueries({ queryKey: ['files'] }); toast.ok('Belge eklendi');
-    } catch (x) { toast.fail(x); } finally { setDocIdx(null); }
-  }
+    } catch (x) { toast.fail(x); } }
   async function planPrep() {
     const base = dl?.day;
     const existing = new Set(prep.map((t) => t.title.toLocaleLowerCase('tr')));
@@ -354,11 +352,10 @@ function OpportunityDetail({ id }: { id: string }) {
               <div key={i} className="task-row" style={{ cursor: 'default', alignItems: 'center' }}>
                 <button type="button" className={`check${d.done ? ' on' : ''}`} onClick={() => upd({ required_docs: docs.map((x, j) => (j === i ? { ...x, done: !x.done } : x)) })} aria-label="Hazır">{d.done && <CheckCircle2 size={14} />}</button>
                 <div className="t"><b style={{ textDecoration: d.done ? 'line-through' : undefined }}>{d.label}</b>{d.file_id && <span className="small muted"> · {files.data?.find((f) => f.id === d.file_id)?.title}</span>}</div>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDocIdx(i); docInput.current?.click(); }}><Upload size={13} />Dosya</button>
+                <MediaSources id={`od-doc-${i}`} size="xs" multiple={false} onFiles={(f) => attachDoc(f, i)} onPicked={(f) => attachDoc(f, i)} />
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => upd({ required_docs: docs.filter((_, j) => j !== i) })}>Kaldır</button>
               </div>
             ))}
-            <input ref={docInput} id="od-doc" type="file" hidden onChange={(e) => { attachDoc(e.target.files); e.target.value = ''; }} />
             <form className="row" style={{ marginTop: 8 }} onSubmit={(e: FormEvent) => { e.preventDefault(); const inp = ((e.currentTarget as HTMLFormElement).elements.namedItem('nd') as HTMLInputElement); if (!inp.value.trim()) return; upd({ required_docs: [...docs, { label: inp.value.trim(), done: false } as RequiredDoc] }); inp.value = ''; }}>
               <input id="od-newdoc" name="nd" className="input" style={{ flex: 1, width: 'auto' }} placeholder="Belge ekle (ör. Sanatçı beyanı)" /><button className="btn btn-glass btn-sm">Ekle</button>
             </form>

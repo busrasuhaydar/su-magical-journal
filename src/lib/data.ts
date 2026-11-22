@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
-import { supabase, sha256 } from './supabase';
+import { supabase, sha256, slugify } from './supabase';
 import { addDays, toInstant, todayKey, type DayKey } from './dates';
 import type { CalEvent, CalendarEntry, FileRec, Holiday, JournalBlock, JournalDay, Profile, Project, ProjectProgress, Task } from './types';
 
@@ -477,6 +477,33 @@ export async function addToGallery(fileId: string, projectId: string) {
   const pos = (data?.[0]?.position ?? 0) + 1;
   const { error } = await supabase.from('file_links').upsert({ file_id: fileId, entity_type: 'project', entity_id: projectId, position: pos }, { onConflict: 'file_id,entity_type,entity_id', ignoreDuplicates: true });
   if (error) throw error;
+}
+
+/** Birden çok dosyayı projenin galerisine ekler (zaten varsa atlar). */
+export async function addManyToGallery(fileIds: string[], projectId: string) {
+  for (const id of fileIds) await addToGallery(id, projectId);
+}
+/** Dosyaları projenin galerisinden çıkarır (dosya silinmez). */
+export async function removeFromProject(fileIds: string[], projectId: string) {
+  if (!fileIds.length) return;
+  const { error } = await supabase.from('file_links').delete().eq('entity_type', 'project').eq('entity_id', projectId).in('file_id', fileIds);
+  if (error) throw error;
+}
+/** Taşı: kaynak projeden çıkarır, hedefe ekler. */
+export async function moveFiles(fileIds: string[], fromProjectId: string | null, toProjectId: string) {
+  await addManyToGallery(fileIds, toProjectId);
+  if (fromProjectId && fromProjectId !== toProjectId) await removeFromProject(fileIds, fromProjectId);
+}
+/** Dosyaları Dosyalar'dan da kaldırır (yumuşak silme; bağlantılar kalır, ama dosya hiçbir yerde listelenmez). */
+export async function softDeleteFiles(fileIds: string[]) {
+  if (!fileIds.length) return;
+  const { error } = await supabase.from('files').update({ deleted_at: new Date().toISOString() }).in('id', fileIds);
+  if (error) throw error;
+}
+/** Hızlı yeni proje: yalnız ad ile. */
+export async function createQuickProject(title: string): Promise<Project> {
+  const slug = `${slugify(title)}-${Date.now().toString(36).slice(-4)}`;
+  return run<Project>(supabase.from('projects').insert({ title: title.trim(), slug }).select().single());
 }
 
 // ══ Faz 4 ══════════════════════════════════════════════

@@ -1,8 +1,8 @@
 // Proje çalışma alanı: kapaklı ana sayfa ve birbirini besleyen bölümler.
-import { useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { useMemo, useState, type DragEvent, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CalendarClock, Check, ChevronLeft, ChevronRight, Compass, Flag, Hourglass, ImagePlus, Lightbulb, Pencil, Plus, Sparkles, StickyNote } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Check, ChevronLeft, ChevronRight, Compass, Flag, Hourglass, Lightbulb, Pencil, Plus, Sparkles, StickyNote } from 'lucide-react';
 import { useEditors } from '../../components/Editors';
 import { TaskRow } from '../../components/TaskRow';
 import { ConfirmButton, Empty, Field, useToast } from '../../components/ui';
@@ -13,10 +13,11 @@ import {
 import { addDays, addMonths, dayKeyOf, daysBetween, formatLong, formatRelative, formatShort, hhmm, minutesOf, monthMatrix, MONTHS, parseKey, startOfMonth, todayKey, WEEKDAYS_SHORT } from '../../lib/dates';
 import {
   IDEA_CATEGORY_LABEL, MEMORY_KIND_LABEL, OPP_DATE_LABEL, OPP_STATUS_COLOR, OPP_STATUS_LABEL, PRIORITY_LABEL, PROJECT_ICONS, PROJECT_STATUS_LABEL,
-  type Project, type Task, type TaskStatus,
+  type FileRec, type Project, type Task, type TaskStatus,
 } from '../../lib/types';
 import { ProjectEditor } from '../Projects';
 import { GalleryTab, Thumb, useProjectGallery } from './Gallery';
+import { MediaSources } from '../../components/Media';
 import { PagesTab } from './Pages';
 import { LinkButton, LinkedIn } from './Links';
 import { HistoryTab, MemoryTab, PeopleTab, SocialTab } from './Sections';
@@ -81,12 +82,11 @@ function ProjectHeader({ p }: { p: Project }) {
   const toast = useToast();
   const [edit, setEdit] = useState(false);
   const [iconOpen, setIconOpen] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
   const today = todayKey();
   const setField = (patch: Partial<Project>) => save.mutate({ id: p.id, title: p.title, slug: p.slug, ...patch }, { onError: (x) => toast.fail(x) });
-  async function uploadCover(fl: FileList | null) {
-    if (!fl?.[0]) return;
-    try { const { rec } = await uploadFile(fl[0]); await addToGallery(rec.id, p.id); qc.invalidateQueries({ queryKey: ['files'] }); setField({ cover_file_id: rec.id }); toast.ok('Kapak görseli eklendi (galeride de duruyor)'); }
+  async function uploadCover(input: File[] | FileRec[]) {
+    if (!input[0]) return;
+    try { const first = input[0]; const rec = first instanceof File ? (await uploadFile(first)).rec : first; await addToGallery(rec.id, p.id); qc.invalidateQueries({ queryKey: ['files'] }); setField({ cover_file_id: rec.id }); toast.ok('Kapak görseli eklendi (galeride de duruyor)'); }
     catch (x) { toast.fail(x); }
   }
   return (
@@ -94,9 +94,8 @@ function ProjectHeader({ p }: { p: Project }) {
       <div className="pcover" style={{ background: cover ? undefined : `linear-gradient(120deg, ${p.color}55, #FFE3D3 55%, #DDF5F8)` }}>
         {cover && <Thumb file={cover} />}
         <div className="pcover-acts">
-          <button type="button" className="btn btn-glass btn-sm" onClick={() => input.current?.click()}><ImagePlus size={13} />{cover ? 'Kapağı değiştir' : 'Kapak ekle'}</button>
+          <MediaSources id="cover-in" size="xs" multiple={false} visualOnly accept="image/*" onFiles={uploadCover} onPicked={uploadCover} />
           {cover && <button type="button" className="btn btn-glass btn-sm" onClick={() => setField({ cover_file_id: null })}>Kaldır</button>}
-          <input ref={input} id="cover-in" type="file" accept="image/*" hidden onChange={(e) => { uploadCover(e.target.files); e.target.value = ''; }} />
         </div>
       </div>
       <div className="pinfo">

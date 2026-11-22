@@ -7,6 +7,7 @@ import { useEditors } from '../components/Editors';
 import { TimeGrid, movedTimes } from '../components/TimeGrid';
 import { TaskRow } from '../components/TaskRow';
 import { ConfirmButton, Empty, Field, formatBytes, useToast } from '../components/ui';
+import { MediaSources } from '../components/Media';
 import { gridItems, useGridHandlers } from './Calendar';
 import { ensureJournalDay, linkFile, uploadFile, useCalendarRange, useFiles, useHolidays, useJournal, useOverdue, useSignedUrl, useSoftDelete } from '../lib/data';
 import { addDays, formatLong, isValidKey, todayKey, type DayKey } from '../lib/dates';
@@ -123,7 +124,6 @@ function JournalPanel({ day }: { day: DayKey }) {
   const [adding, setAdding] = useState<'' | 'note' | 'link'>('');
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setGoal(j.data?.day?.goal ?? ''); }, [j.data?.day?.goal]);
   const blocks = j.data?.blocks ?? [];
@@ -142,17 +142,21 @@ function JournalPanel({ day }: { day: DayKey }) {
     if ((j.data?.day?.goal ?? '') === goal) return;
     try { const jd = await ensureJournalDay(day); const { error } = await supabase.from('journal_days').update({ goal: goal || null }).eq('id', jd.id); if (error) throw error; refresh(); toast.ok('Günün hedefi kaydedildi'); } catch (x) { toast.fail(x); }
   }
-  async function onFiles(list: FileList | null) {
+  async function onFiles(list: FileList | File[] | FileRec[] | null) {
     if (!list?.length) return;
     setBusy(true);
     try {
       const jd = await ensureJournalDay(day);
       let reusedCount = 0;
       let pos = (blocks.at(-1)?.position ?? 0) + 1;
-      for (const f of Array.from(list)) {
-        if (f.size > 1024 ** 3) { toast.fail(new Error(`${f.name} 1 GB sınırını aşıyor`)); continue; }
-        const { rec, reused } = await uploadFile(f);
-        if (reused) reusedCount++;
+      for (const f of Array.from(list as ArrayLike<File | FileRec>)) {
+        let rec: FileRec;
+        if (f instanceof File) {
+          if (f.size > 1024 ** 3) { toast.fail(new Error(`${f.name} 1 GB sınırını aşıyor`)); continue; }
+          const r = await uploadFile(f);
+          if (r.reused) reusedCount++;
+          rec = r.rec;
+        } else rec = f;
         await linkFile(rec.id, 'journal_day', jd.id);
         await addBlock({ kind: kindOf(rec.mime), title: rec.title, file_id: rec.id, size: 'm', position: pos++ });
       }
@@ -191,8 +195,7 @@ function JournalPanel({ day }: { day: DayKey }) {
 
       <div className={`dropzone${over ? ' over' : ''}`} style={{ marginTop: 14 }} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop}>
         <Upload size={18} /> {busy ? 'Yükleniyor…' : 'Dosyaları buraya bırakın ya da'}{' '}
-        <button type="button" className="btn btn-glass btn-sm" disabled={busy} onClick={() => inputRef.current?.click()}>Dosya seç</button>
-        <input ref={inputRef} id="j-files" type="file" multiple hidden accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.txt,.md,.pages,.key,.xls,.xlsx" onChange={(e) => { onFiles(e.target.files); e.target.value = ''; }} />
+        <MediaSources id="j-files" busy={busy} accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.txt,.md,.pages,.key,.xls,.xlsx" onFiles={onFiles} onPicked={onFiles} />
         <div className="small" style={{ marginTop: 4 }}>Fotoğraf, video, ses, PDF, belge · aynı dosya ikinci kez yüklenmez</div>
       </div>
 

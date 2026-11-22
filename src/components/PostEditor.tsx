@@ -1,7 +1,7 @@
 // Sosyal medya içerik düzenleyicisi. Projeden de merkezden de açılır; her zaman aynı tek kaydı düzenler.
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, ImagePlus, Send, X } from 'lucide-react';
+import { ExternalLink, Send, X } from 'lucide-react';
 import { callDispatcher } from '../lib/notify';
 import { postText, shareTo } from '../lib/share';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { dayKeyOf, hhmm, minutesOf, parseHHMM, toInstant } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { CONTENT_TYPE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type FileRec, type Platform, type PostStatus, type SocialPost } from '../lib/types';
 import { ConfirmButton, Dialog, Field, useToast } from './ui';
+import { MediaSources } from './Media';
 
 const PLATFORMS: Platform[] = ['instagram', 'x', 'youtube', 'website'];
 const X_LIMIT = 280, IG_LIMIT = 2200;
@@ -23,7 +24,6 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
   const projects = useProjects();
   const files = useFiles();
   const links = useFileLinks();
-  const fileInput = useRef<HTMLInputElement>(null);
   const targets = draft.post_targets ?? [];
   const [f, setF] = useState({
     title: draft.title ?? '', project_id: draft.project_id ?? '', content_type: draft.content_type ?? 'post',
@@ -103,13 +103,13 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
     } catch (x) { toast.fail(x); } finally { setBusy(false); }
   }
 
-  async function addMedia(list: FileList | null) {
-    if (!list?.length) return;
+  async function addMedia(input: File[] | FileRec[]) {
+    if (!input.length) return;
     setBusy(true);
     try {
       const saved = draft.id ? { id: draft.id } : await submit();
       if (!saved) return;
-      for (const file of Array.from(list)) { const { rec } = await uploadFile(file); await linkFile(rec.id, 'social_post', saved.id); }
+      for (const item of input) { const rec = item instanceof File ? (await uploadFile(item)).rec : item; await linkFile(rec.id, 'social_post', saved.id); }
       qc.invalidateQueries({ queryKey: ['files'] });
       toast.ok('Medya eklendi');
       if (!draft.id) onClose();
@@ -153,8 +153,7 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
         <Field label="Medya">
           <div className="row">
             {media.map(({ link, file }) => file && <MediaThumb key={link.id} file={file} onRemove={async () => { const { error } = await supabase.from('file_links').delete().eq('id', link.id); if (error) toast.fail(error); else qc.invalidateQueries({ queryKey: ['files'] }); }} />)}
-            <button type="button" className="btn btn-glass btn-sm" disabled={busy} onClick={() => fileInput.current?.click()}><ImagePlus size={14} />{busy ? 'Yükleniyor…' : 'Görsel / video ekle'}</button>
-            <input ref={fileInput} id="po-media" type="file" multiple accept="image/*,video/*" hidden onChange={(e) => { addMedia(e.target.files); e.target.value = ''; }} />
+            <MediaSources id="po-media" busy={busy} visualOnly accept="image/*,video/*" onFiles={addMedia} onPicked={addMedia} />
             {!draft.id && <span className="small muted">Medya eklemek içeriği önce kaydeder.</span>}
           </div>
         </Field>

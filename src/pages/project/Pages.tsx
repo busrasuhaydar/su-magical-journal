@@ -6,10 +6,11 @@ import { ChevronDown, ChevronRight, FilePlus2, GripVertical, ImagePlus, Link2, P
 import { addToGallery, uploadFile, usePageBlocks, usePages, useSignedUrl, useTasks } from '../../lib/data';
 import { supabase } from '../../lib/supabase';
 import { formatRelative, dayKeyOf } from '../../lib/dates';
-import type { BlockType, Page, PageBlock, Project } from '../../lib/types';
+import type { BlockType, FileRec, Page, PageBlock, Project } from '../../lib/types';
 import { useEditors } from '../../components/Editors';
 import { TaskRow } from '../../components/TaskRow';
 import { ConfirmButton, Dialog, Empty, useToast } from '../../components/ui';
+import { MediaSources } from '../../components/Media';
 import { Thumb, useProjectGallery } from './Gallery';
 import { LinkButton } from './Links';
 
@@ -256,12 +257,11 @@ function Picker({ p, type, pageId, allPages, onClose, onPick }: { p: Project; ty
   const qc = useQueryClient();
   const toast = useToast();
   const { openTask } = useEditors();
-  const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const pool = type === 'image' ? gallery.filter((g) => g.file.mime.startsWith('image/') || g.file.mime.startsWith('video/')) : gallery;
-  async function upload(fl: FileList | null) {
-    if (!fl?.length) return; setBusy(true);
-    try { const { rec } = await uploadFile(fl[0]); await addToGallery(rec.id, p.id); qc.invalidateQueries({ queryKey: ['files'] }); onPick({ file_id: rec.id }); toast.ok('Galeriye de eklendi'); }
+  async function upload(input: File[] | FileRec[]) {
+    if (!input.length) return; setBusy(true);
+    try { const first = input[0]; const rec = first instanceof File ? (await uploadFile(first)).rec : first; await addToGallery(rec.id, p.id); qc.invalidateQueries({ queryKey: ['files'] }); onPick({ file_id: rec.id }); toast.ok('Galeriye de eklendi'); }
     catch (x) { toast.fail(x); } finally { setBusy(false); }
   }
   const title = { image: 'Galeriden görsel seçin', file: 'Dosya seçin', task: 'Görev seçin', page: 'Sayfa seçin' }[type];
@@ -270,8 +270,8 @@ function Picker({ p, type, pageId, allPages, onClose, onPick }: { p: Project; ty
       {(type === 'image' || type === 'file') && (
         <>
           <div className="row" style={{ marginBottom: 12 }}>
-            <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => input.current?.click()}><ImagePlus size={14} />{busy ? 'Yükleniyor…' : 'Yeni yükle (galeriye de eklenir)'}</button>
-            <input ref={input} id="pk-in" type="file" hidden accept={type === 'image' ? 'image/*,video/*' : undefined} onChange={(e) => { upload(e.target.files); e.target.value = ''; }} />
+            <MediaSources id="pk-in" busy={busy} multiple={false} visualOnly={type === 'image'} accept={type === 'image' ? 'image/*,video/*' : undefined} onFiles={upload} onPicked={upload} />
+            <span className="small muted">Seçtiğiniz dosya projenin galerisine de eklenir.</span>
           </div>
           {pool.length === 0 ? <p className="small muted">Galeride uygun dosya yok.</p> : (
             <div className="pgal">{pool.map((g) => <figure key={g.link.id} className="pgal-item" onClick={() => onPick({ file_id: g.file.id })}><div className="pgal-img"><Thumb file={g.file} /></div><figcaption>{g.link.caption || g.file.title}</figcaption></figure>)}</div>

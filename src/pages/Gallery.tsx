@@ -1,13 +1,13 @@
 // Ortak galeri: tüm projelerin, günlüğün ve paylaşımların görselleri tek yerde. Dosya bir kez saklanır, istediğiniz projeye bağlanır.
 import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Upload, X, FolderPlus } from 'lucide-react';
+import { CheckSquare, FolderPlus, Trash2, Upload, X } from 'lucide-react';
 import { PageHead } from '../components/Shell';
-import { Empty, formatBytes, useToast } from '../components/ui';
-import { addToGallery, uploadFile, useFileLinks, useFiles, useProjects, useSignedUrl } from '../lib/data';
+import { ConfirmButton, Empty, formatBytes, useToast } from '../components/ui';
+import { addToGallery, softDeleteFiles, uploadFile, useFileLinks, useFiles, useProjects, useSignedUrl } from '../lib/data';
+import { BulkBar, ProjectPickDialog, SelectTile, Thumb } from '../components/Media';
 import { dayKeyOf, formatShort } from '../lib/dates';
 import type { FileRec } from '../lib/types';
-import { Thumb } from './project/Gallery';
 
 export default function CommonGallery() {
   const files = useFiles();
@@ -20,6 +20,8 @@ export default function CommonGallery() {
   const [open, setOpen] = useState<FileRec | null>(null);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [selMode, setSelMode] = useState(false);
+  const [sel, setSel] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
 
   const visual = (f: FileRec) => f.mime.startsWith('image/') || f.mime.startsWith('video/');
@@ -30,6 +32,10 @@ export default function CommonGallery() {
   };
   const list = useMemo(() => (files.data ?? []).filter((f) => visual(f) && (!kind || f.mime.startsWith(kind)) &&
     (!proj || (proj === 'none' ? projOf(f.id).length === 0 : projOf(f.id).includes(proj)))), [files.data, links.data, proj, kind]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = (id: string) => setSel((x) => (x.includes(id) ? x.filter((i) => i !== id) : [...x, id]));
+  const endSel = () => { setSel([]); setSelMode(false); };
+  const linkedProjects = useMemo(() => [...new Set(sel.flatMap((id) => projOf(id)))], [sel, links.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onFiles(fl: FileList | null) {
     if (!fl?.length) return; setBusy(true);
@@ -47,7 +53,8 @@ export default function CommonGallery() {
           {projects.data?.map((p) => <option key={p.id} value={p.id}>{p.icon ?? '✦'} {p.title}</option>)}
         </select>
         <div className="seg">{[['', 'Tümü'], ['image/', 'Görsel'], ['video/', 'Video']].map(([k, l]) => <button type="button" key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{l}</button>)}</div>
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => input.current?.click()}><Upload size={15} />{busy ? 'Yükleniyor…' : 'Yükle'}</button>
+        <button type="button" className={`btn ${selMode ? 'btn-primary' : 'btn-glass'}`} onClick={() => (selMode ? endSel() : setSelMode(true))}><CheckSquare size={15} />{selMode ? 'Seçimi bitir' : 'Seç'}</button>
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => input.current?.click()}><Upload size={15} />{busy ? 'Yükleniyor…' : 'Cihazdan yükle'}</button>
         <input ref={input} id="cg-in" type="file" multiple hidden accept="image/*,video/*" onChange={(e) => { onFiles(e.target.files); e.target.value = ''; }} />
       </PageHead>
       <p className="small muted" style={{ margin: 0 }}>Projelerdeki, günlükteki ve paylaşımlardaki bütün görseller burada. Bir görseli birden çok projeye bağlayabilirsiniz; kopya oluşmaz.{proj && proj !== 'none' ? ' Yüklediğiniz görseller seçili projeye de eklenir.' : ''}</p>
@@ -56,6 +63,7 @@ export default function CommonGallery() {
         {!files.isLoading && list.length === 0 ? <Empty title="Görsel yok">Görselleri buraya sürükleyin veya Yükle’ye basın.</Empty> : (
           <div className="pgal">
             {list.map((f) => {
+              if (selMode) return <SelectTile key={f.id} file={f} selected={sel.includes(f.id)} onToggle={() => toggle(f.id)} caption={f.title} />;
               const ps = projOf(f.id).map((id) => projects.data?.find((p) => p.id === id)).filter(Boolean);
               const u = usedIn(f.id);
               return (
@@ -71,6 +79,7 @@ export default function CommonGallery() {
           </div>
         )}
       </section>
+      {selMode && <BulkBar selected={sel} total={list.length} fromProject={proj && proj !== 'none' ? proj : null} linkedProjects={linkedProjects} onAll={() => setSel(list.map((f) => f.id))} onClear={endSel} />}
       {open && <Viewer file={open} projectIds={projOf(open.id)} onClose={() => setOpen(null)} />}
     </>
   );
@@ -82,6 +91,7 @@ function Viewer({ file, projectIds, onClose }: { file: FileRec; projectIds: stri
   const links = useFileLinks();
   const qc = useQueryClient();
   const toast = useToast();
+  const [add, setAdd] = useState(false);
   return (
     <div className="scrim lightbox" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="lb-body">
@@ -97,13 +107,13 @@ function Viewer({ file, projectIds, onClose }: { file: FileRec; projectIds: stri
             ); })}
             {!projectIds.length && <span className="small muted">Henüz yok</span>}
           </div>
-          <label className="field"><span className="row" style={{ gap: 6 }}><FolderPlus size={14} />Projenin galerisine ekle</span>
-            <select id="cg-add" className="select" value="" onChange={async (e) => { if (!e.target.value) return; try { await addToGallery(file.id, e.target.value); qc.invalidateQueries({ queryKey: ['files'] }); toast.ok('Projenin galerisine eklendi'); } catch (x) { toast.fail(x); } }}>
-              <option value="">Proje seçin…</option>{projects.data?.filter((p) => !projectIds.includes(p.id)).map((p) => <option key={p.id} value={p.id}>{p.icon ?? '✦'} {p.title}</option>)}
-            </select>
-          </label>
+          <button type="button" className="btn btn-glass btn-sm" onClick={() => setAdd(true)}><FolderPlus size={14} />Projeye ekle / yeni proje</button>
           {u.data && <a className="btn btn-ghost btn-sm" href={u.data} target="_blank" rel="noopener noreferrer">Yeni sekmede aç</a>}
+          <ConfirmButton label={<><Trash2 size={14} />Sil</>} className="btn btn-ghost btn-sm" confirmText="Medya her yerden silinsin mi?"
+            onConfirm={async () => { try { await softDeleteFiles([file.id]); qc.invalidateQueries({ queryKey: ['files'] }); onClose(); } catch (x) { toast.fail(x); } }} />
         </aside>
+        {add && <ProjectPickDialog title="Projeye ekle" exclude={projectIds} onClose={() => setAdd(false)}
+          onPick={async (p) => { try { await addToGallery(file.id, p.id); qc.invalidateQueries({ queryKey: ['files'] }); toast.ok(`${p.title} galerisine eklendi`); setAdd(false); } catch (x) { toast.fail(x); } }} />}
       </div>
     </div>
   );

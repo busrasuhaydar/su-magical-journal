@@ -524,3 +524,14 @@ body {
 .cmdk-group { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-500); padding: 10px 12px 4px; }
 .search-btn { position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); right: calc(max(16px, env(safe-area-inset-right, 0px)) + 52px); z-index: 45; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--rose-600); padding: 0; }
 @media (max-width: 760px) { .search-btn { top: calc(10px + env(safe-area-inset-top, 0px)); } .main > .topbar:first-of-type { padding-right: 100px; } }
+
+/* ── Medya seçici ve toplu seçim ── */
+.pgal-item.sel { outline: 3px solid var(--rose-500); outline-offset: -3px; }
+.pgal-check { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; background: rgba(40,20,32,.35); color: #fff; display: grid; place-items: center; z-index: 2; pointer-events: none; }
+.pgal-item.sel .pgal-check { background: var(--rose-500); }
+.bulkbar { position: sticky; bottom: 12px; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border-radius: var(--r-lg); background: rgba(255,250,252,.96); border: 1px solid var(--glass-edge); box-shadow: var(--shadow-pop); backdrop-filter: blur(14px); }
+.bulkbar b { margin-right: 4px; }
+.msrc { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pick-list { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+.pick-list button { text-align: left; }
+.pick-grid { max-height: 52vh; overflow-y: auto; padding: 2px; }
