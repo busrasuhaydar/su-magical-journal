@@ -106,6 +106,7 @@ export default function Home() {
           </div>
         </section>
 
+        <QuickIdeas />
         <section className="glass panel span-all">
           <div className="panel-head"><h2>Projelerim</h2><Link className="small" to="/projeler">Tümünü gör →</Link></div>
           {active.length === 0 ? <Empty title="Henüz proje yok"><Link to="/projeler">İlk projenizi ekleyin</Link>, görevleri ona bağlayın; ilerleme yüzdesi kendiliğinden hesaplanır.</Empty> : (
@@ -170,5 +171,31 @@ function SocialSummary() {
       <p className="small muted" style={{ margin: '8px 0' }}>Önümüzdeki 7 günde planlı · {posts.filter((p) => p.status === 'published').length} yayınlandı{failed ? ` · ${failed} başarısız` : ''}</p>
       {todays.length > 0 && <div className="agenda-mini">{todays.map((p) => <div key={p.id} className="it"><span className="mono">{hhmm(minutesOf(p.scheduled_at!))}</span><span><b style={{ fontWeight: 600 }}>{p.title}</b> <span className="small muted">· {POST_STATUS_LABEL[p.status]}</span></span></div>)}</div>}
     </>
+  );
+}
+
+function QuickIdeas() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [t, setT] = useState('');
+  const overdue = useOverdue().data?.length ?? 0;
+  const today = todayKey();
+  const up = useCalendarRange(today, addDays(today, 7)).data;
+  const dl = up?.oppDates?.find((d) => d.kind === 'deadline');
+  const tip = overdue ? `${overdue} bekleyen görevin var; önce onları bugüne al ya da ertele.` : dl ? `${dl.opportunities?.title} için son başvuru ${formatShort(dl.day)}. Hazırlık görevlerine bak.` : 'Takvimin bu hafta sakin; yeni bir fikri projeye dönüştürmek için iyi zaman.';
+  async function save() {
+    const v = t.trim(); if (!v) return;
+    const [first, ...rest] = v.split('\n');
+    const { error } = await supabase.from('ideas').insert({ title: first.slice(0, 200), body: rest.join('\n').trim() || null, category: 'art' });
+    if (error) return toast.fail(error);
+    setT(''); qc.invalidateQueries({ queryKey: ['ideas'] }); toast.ok('Fikir kaydedildi ✦');
+  }
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Aklımdakiler</h2><Link className="small" to="/fikirler">Tüm fikirler →</Link></div>
+      <p className="small" style={{ marginTop: 0, color: 'var(--rose-600)' }}>✦ {tip}</p>
+      <textarea id="qi" className="textarea" style={{ minHeight: 110 }} value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} placeholder="Aklına gelen her şeyi yaz… (ilk satır başlık · ⌘+Enter kaydeder)" />
+      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={save}>Fikri kaydet</button>
+    </section>
   );
 }
