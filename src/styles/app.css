@@ -782,3 +782,8 @@ html.simple .glass, html.simple .dialog, html.simple .lb-card, html.simple .cmdk
 .wd-add { justify-self: start; width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; background: rgba(255,255,255,.6); color: var(--rose-600); opacity: .6; }
 .wd-add:hover { opacity: 1; background: #fff; }
 @media (max-width: 760px) { .week-strip { grid-template-columns: 1fr; } .week-strip .wday { min-height: 0; } }
+
+/* ── Simge düğmeleri: dolgu sıfırlanır, simge hiçbir zaman küçülmez ── */
+.btn.icon-btn, .btn.icon-only { padding: 0; }
+.btn svg, .nav svg, .tabbar svg { flex: none; }
+.btn.icon-btn svg { width: 18px; height: 18px; }
