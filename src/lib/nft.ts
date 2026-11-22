@@ -67,19 +67,32 @@ export async function saveOriginal(n: Nft, video = false) {
   try { const { blob, name } = await fetchOriginal(n, video); saveBlob(blob, name); return 'saved' as const; }
   catch { window.open((video ? n.video : n.original) ?? n.opensea, '_blank'); return 'opened' as const; }
 }
-export const shareText = (n: Nft) => `${n.name}\n${n.superrare ?? n.opensea}`;
-/** Telefonda paylaş menüsü (orijinal dosyayla); bilgisayarda görsel panoya kopyalanır ve X açılır: tweet kutusuna Cmd+V ile yapıştır. */
-export async function shareOriginal(n: Nft): Promise<'sheet' | 'clipboard' | 'intent'> {
-  const text = shareText(n);
+/** Paylaşım metninin en başına eser adını ekler (zaten başındaysa tekrarlamaz). */
+export function withWorkName(text: string, names: string[]) {
+  const uniq = [...new Set(names.map((x) => x.trim()).filter(Boolean))];
+  const head = uniq.filter((x) => !text.trimStart().toLocaleLowerCase('tr').startsWith(x.toLocaleLowerCase('tr')));
+  return head.length ? `${head.join(' · ')}\n\n${text}`.trim() : text;
+}
+/** Metindeki OpenSea/SuperRare bağlantılarından eserleri bulur. */
+export function worksInLinks(links: string[], items: Nft[]) {
+  const has = (u: string | null) => !!u && links.some((l) => l.includes(u) || u.includes(l));
+  return items.filter((n) => has(n.opensea) || has(n.superrare));
+}
+export const shareText = (n: Nft, extra = '') => withWorkName(extra, [n.name]);
+/** Telefonda paylaş menüsü (orijinal dosyayla); bilgisayarda görsel panoya kopyalanır ve X/Instagram açılır: Cmd+V ile yapıştır. Metnin başına eser adı otomatik eklenir. */
+export async function shareOriginal(n: Nft, extra = '', platform: 'x' | 'instagram' = 'x'): Promise<'sheet' | 'clipboard' | 'intent'> {
+  const text = shareText(n, extra);
   const url = n.superrare ?? n.opensea;
+  if (platform === 'instagram') { try { await navigator.clipboard.writeText(text); } catch { /* yok say */ } }
   try {
     const { blob, name } = await fetchOriginal(n);
     const file = new File([blob], name, { type: blob.type });
-    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text }); return 'sheet'; }
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text: platform === 'x' ? text : undefined }); return 'sheet'; }
   } catch (x) { if ((x as Error).name === 'AbortError') throw x; }
   let copied = false;
-  try { await copyImage(n); copied = true; } catch { /* panoya konamazsa yalnız bağlantı */ }
-  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(n.name)}&url=${encodeURIComponent(url)}`, '_blank');
+  if (platform === 'x') { try { await copyImage(n); copied = true; } catch { /* panoya konamazsa yalnız metin */ } }
+  if (platform === 'instagram') { window.open('https://www.instagram.com/', '_blank', 'noopener'); return 'intent'; }
+  window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
   return copied ? 'clipboard' : 'intent';
 }
 

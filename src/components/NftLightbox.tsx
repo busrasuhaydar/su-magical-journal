@@ -96,10 +96,11 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
   const [failed, setFailed] = useState(false);
   const [zoom, setZoom] = useState(false);
   const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
   const strip = useRef<HTMLDivElement>(null);
   const touch = useRef<number | null>(null);
   const go = useCallback((d: number) => setIndex((index + d + items.length) % items.length), [index, items.length, setIndex]);
-  useEffect(() => { setLoaded(false); setFailed(false); setZoom(false); }, [index]);
+  useEffect(() => { setLoaded(false); setFailed(false); setZoom(false); setMsg(''); }, [index]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement; if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT') return;
@@ -116,7 +117,14 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
   const detail = [n.name, n.description, n.opensea, n.superrare].filter(Boolean).join('\n\n');
   async function save(video = false) { setBusy('save'); const r = await saveOriginal(n, video); toast.ok(r === 'saved' ? 'Orijinal dosya indirildi' : 'Orijinal yeni sekmede açıldı'); setBusy(''); }
   async function copyImg() { setBusy('img'); try { await copyImage(n); toast.ok('Görsel kopyalandı: Cmd+V ile yapıştır'); } catch (x) { toast.fail(x); } setBusy(''); }
-  async function share() { setBusy('share'); try { const r = await shareOriginal(n); toast.ok(r === 'sheet' ? 'Paylaş menüsü açıldı' : r === 'clipboard' ? 'Görsel kopyalandı: X penceresinde Cmd+V ile yapıştır' : 'X açıldı; görseli Orijinali kaydet ile indirip ekle'); } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); } setBusy(''); }
+  async function share(platform: 'x' | 'instagram') {
+    setBusy(platform);
+    try {
+      const r = await shareOriginal(n, msg, platform);
+      toast.ok(r === 'sheet' ? 'Paylaş menüsü açıldı' : platform === 'instagram' ? 'Metin kopyalandı; Instagram’da yapıştır' : r === 'clipboard' ? 'Görsel panoda: gönderi kutusunda ⌘+V ile yapıştır' : 'X açıldı; görseli Orijinali kaydet ile ekle');
+    } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); }
+    setBusy('');
+  }
   return (
     <div className="lb" role="dialog" aria-modal="true" aria-label={n.name}>
       <div className="lb-bg" onClick={onClose} />
@@ -138,9 +146,14 @@ export function Lightbox({ items, index, setIndex, onClose }: { items: Nft[]; in
             <div className="row" style={{ gap: 6 }}>
               <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => save()}><Download size={13} />{busy === 'save' ? 'İniyor…' : 'Orijinali kaydet'}</button>
               <button type="button" className="btn btn-copy btn-sm" disabled={!!busy} onClick={copyImg}><Copy size={13} />{busy === 'img' ? 'Kopyalanıyor…' : 'Görseli kopyala (Cmd+V)'}</button>
-              <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={share}><Share2 size={13} />{busy === 'share' ? 'Hazırlanıyor…' : 'Tweet / paylaş'}</button>
               {n.video && <button type="button" className="btn btn-glass btn-sm" onClick={() => save(true)}><Download size={13} />Video</button>}
             </div>
+            <div className="lb-grp"><span className="small muted"><Share2 size={12} /> Paylaş · metnin başına “{n.name}” otomatik eklenir</span>
+              <textarea className="textarea" style={{ minHeight: 56 }} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Paylaşım metnin…" />
+              <div className="row" style={{ gap: 6 }}>
+                <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => share('x')}>{busy === 'x' ? 'Hazırlanıyor…' : 'X'}</button>
+                <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => share('instagram')}>{busy === 'instagram' ? 'Hazırlanıyor…' : 'Instagram'}</button>
+              </div></div>
             <div className="lb-grp"><span className="small muted">OpenSea</span>
               <div className="row" style={{ gap: 6 }}><a className="btn btn-glass btn-sm" href={n.opensea} target="_blank" rel="noreferrer" title="OpenSea'de aç">OS <ExternalLink size={13} /></a><button type="button" className="btn btn-copy btn-sm icon-only" title="OpenSea linkini kopyala" aria-label="OpenSea linkini kopyala" onClick={() => copy(n.opensea, 'OpenSea linki')}><Copy size={14} /></button></div></div>
             {n.superrare && <div className="lb-grp"><span className="small muted">SuperRare</span>

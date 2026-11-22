@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, Send, X } from 'lucide-react';
 import { callDispatcher } from '../lib/notify';
 import { postText, shareTo } from '../lib/share';
+import { useNfts, withWorkName, worksInLinks } from '../lib/nft';
 import { useQuery } from '@tanstack/react-query';
 import { linkFile, uploadFile, useFileLinks, useFiles, useMarkPublished, useProjects, useSavePost, useSignedUrl, useSocialAccounts, useSoftDeletePost } from '../lib/data';
 import { dayKeyOf, hhmm, minutesOf, parseHHMM, toInstant } from '../lib/dates';
@@ -24,6 +25,7 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
   const projects = useProjects();
   const files = useFiles();
   const links = useFileLinks();
+  const nfts = useNfts();
   const targets = draft.post_targets ?? [];
   const [f, setF] = useState({
     title: draft.title ?? '', project_id: draft.project_id ?? '', content_type: draft.content_type ?? 'post',
@@ -67,7 +69,9 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
       const mediaFiles = media.map((m) => m.file).filter(Boolean) as FileRec[];
       if (platform === 'instagram' && !mediaFiles.length) return toast.fail(new Error('Instagram için önce bir görsel veya video ekleyin.'));
       if (!draft.id) { const saved = await submit(); if (!saved) return; toast.ok('İçerik kaydedildi'); }
-      const r = await shareTo(platform, postText({ title: f.title, caption_tr: f.caption_tr, caption_en: f.caption_en, hashtags: tags, links: f.links.split('\n').map((l) => l.trim()).filter(Boolean) }), mediaFiles);
+      const linkList = f.links.split('\n').map((l) => l.trim()).filter(Boolean);
+      const names = worksInLinks(linkList, nfts.data?.items ?? []).map((w) => w.name);
+      const r = await shareTo(platform, withWorkName(postText({ title: f.title, caption_tr: f.caption_tr, caption_en: f.caption_en, hashtags: tags, links: linkList }), names), mediaFiles);
       toast.ok(r.note);
       setAsk(platform);
     } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); }
@@ -148,6 +152,10 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
         <div className="grid-2">
           <Field label="Etiketler (boşlukla ayırın)"><input id="po-tags" className="input" value={f.hashtags} onChange={set('hashtags')} placeholder="#surrealcity #dijitalsanat" /></Field>
           <Field label="Bağlantılar (her satıra bir tane)"><textarea id="po-links" className="textarea" style={{ minHeight: 44 }} value={f.links} onChange={set('links')} /></Field>
+          <Field label="Eser ekle (adı yazın; paylaşımda adı metnin başına eklenir)">
+            <input className="input" list="po-works" placeholder="Eser adı…" onChange={(e) => { const w = nfts.data?.items.find((n) => n.name === e.target.value); if (w) { setF((x) => ({ ...x, links: [x.links, w.superrare ?? w.opensea].filter(Boolean).join('\n') })); e.target.value = ''; } }} />
+            <datalist id="po-works">{(nfts.data?.items ?? []).map((n) => <option key={n.contract + n.tokenId} value={n.name} />)}</datalist>
+          </Field>
         </div>
 
         <Field label="Medya">
