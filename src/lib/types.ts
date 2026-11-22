@@ -18,7 +18,7 @@ export interface Task {
   id: string; project_id: string | null; contact_id: string | null; title: string; description: string | null;
   due_date: string | null; starts_at: string | null; ends_at: string | null; priority: Priority;
   category: string | null; status: TaskStatus; rrule: string | null; postpone_count: number;
-  completed_at: string | null; created_at: string; updated_at: string; parent_task_id: string | null; opportunity_id: string | null;
+  completed_at: string | null; created_at: string; updated_at: string; parent_task_id: string | null; opportunity_id: string | null; recurrence_parent?: string | null;
 }
 export interface CalEvent {
   id: string; project_id: string | null; kind: EventKind; title: string; description: string | null;

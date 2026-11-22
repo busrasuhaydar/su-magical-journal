@@ -744,3 +744,5 @@ h1 { font-size: 36px; } h2 { font-size: 25px; } h3 { font-size: 19px; }
 .aotd:hover img { transform: scale(1.04); }
 .btn.icon-only { width: 34px; height: 34px; padding: 0; flex: none; border-radius: 50%; }
 .new-menu { display: grid; gap: 2px; padding: 6px; margin-bottom: 8px; border-radius: 16px; background: rgba(255,255,255,.65); box-shadow: var(--lg-edge); }
+.routine { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 16px; background: rgba(255,255,255,.55); box-shadow: var(--lg-edge); }
+.routine.soon { background: linear-gradient(135deg, rgba(255,61,142,.14), rgba(255,122,48,.12)); }

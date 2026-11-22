@@ -159,6 +159,7 @@ export default function Home() {
         </section>
 
         <div className="col">
+          <Routines />
           <TodoList />
           <FocusTimer title={focus?.title} />
         </div>
@@ -386,6 +387,39 @@ function ArtOfTheDay() {
       <div className="row" style={{ marginTop: 8, gap: 6 }}>
         <Link className="btn btn-primary btn-sm" to={to}>Aç · fikir yaz</Link>
         <button type="button" className="btn btn-glass btn-sm" onClick={async () => { try { await shareOriginal(n); } catch (x) { if ((x as Error).name !== 'AbortError') toast.fail(x); } }}>Tweet / paylaş</button>
+      </div>
+    </section>
+  );
+}
+
+/** Tekrarlayan düzenler (ör. D vitamini): son yapılan, sıradaki tarih, kalan gün; tek tıkla tamamla. */
+function Routines() {
+  const all = useTasks();
+  const complete = useCompleteTask();
+  const toast = useToast();
+  const today = todayKey();
+  const rows = (all.data ?? []).filter((t) => t.rrule && (t.status === 'todo' || t.status === 'doing') && t.due_date).map((t) => {
+    const root = t.recurrence_parent ?? t.id;
+    const last = (all.data ?? []).filter((x) => x.status === 'done' && x.completed_at && ((x.recurrence_parent ?? x.id) === root)).sort((a, b) => b.completed_at!.localeCompare(a.completed_at!))[0];
+    const days = Math.round((Date.parse(t.due_date! + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86_400_000);
+    const every = Number(/INTERVAL=(\d+)/.exec(t.rrule!)?.[1] ?? 1);
+    return { t, last, days, every };
+  }).sort((a, b) => a.days - b.days);
+  if (!rows.length) return null;
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Düzenli işler</h2><span className="count">{rows.length}</span></div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {rows.map(({ t, last, days, every }) => (
+          <div key={t.id} className={`routine${days <= 1 ? ' soon' : ''}`}>
+            <div style={{ minWidth: 0 }}>
+              <b>{t.title}</b>
+              <div className="small muted">{last ? `Son: ${formatShort(dayKeyOf(last.completed_at!))} · ` : ''}Sıradaki: {formatShort(t.due_date!)} · {days < 0 ? `${-days} gün gecikti` : days === 0 ? 'bugün' : days === 1 ? 'yarın' : `${days} gün sonra`}{every > 1 ? ` · her ${every} günde bir` : ''}</div>
+            </div>
+            <button type="button" className="btn btn-primary btn-sm" disabled={days > 1} title={days > 1 ? 'Zamanı gelince işaretleyebilirsin' : 'Yaptım'}
+              onClick={async () => { try { await complete.mutateAsync({ id: t.id, done: true }); toast.ok('Tamamlandı, sıradaki tarih hazır'); } catch (x) { toast.fail(x); } }}><Check size={14} />Yaptım</button>
+          </div>
+        ))}
       </div>
     </section>
   );
