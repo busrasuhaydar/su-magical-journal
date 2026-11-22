@@ -120,15 +120,12 @@ export function useYearEntries(year: number) {
 }
 
 export function useHolidays(from: DayKey, to: DayKey) {
-  const profile = useProfile();
   const q = useQuery({
     queryKey: ['holidays', from, to],
     staleTime: Infinity,
-    queryFn: () => run<Holiday[]>(supabase.from('holidays').select('*').gte('day', from).lte('day', to).order('day').limit(5000)),
+    queryFn: () => run<Holiday[]>(supabase.from('holidays').select('*').in('country', ['TR', 'US']).gte('day', from).lte('day', to).order('day').limit(5000)),
   });
-  const hidden = new Set(profile.data?.hidden_holiday_countries ?? []);
-  const showObs = profile.data?.show_observances ?? true;
-  const list = (q.data ?? []).filter((h) => !hidden.has(h.country) && (showObs || h.kind !== 'observance'));
+  const list = (q.data ?? []).filter((h) => h.country === 'TR' || h.country === 'US');
   const byDay = new Map<DayKey, Holiday[]>();
   for (const h of list) byDay.set(h.day, [...(byDay.get(h.day) ?? []), h]);
   return { ...q, list, byDay };

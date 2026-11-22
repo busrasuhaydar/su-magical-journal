@@ -18,6 +18,8 @@ import SettingsPage from './pages/Settings';
 import SocialPage from './pages/Social';
 import ContactsPage from './pages/Contacts';
 import IdeasPage from './pages/Ideas';
+import { applySimple } from './lib/prefs';
+applySimple();
 import NftCollectionsPage from './pages/NftCollections';
 import ProjectWorkspace from './pages/project/Workspace';
 import OpportunitiesPage from './pages/Opportunities';

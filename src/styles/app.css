@@ -746,3 +746,7 @@ h1 { font-size: 36px; } h2 { font-size: 25px; } h3 { font-size: 19px; }
 .new-menu { display: grid; gap: 2px; padding: 6px; margin-bottom: 8px; border-radius: 16px; background: rgba(255,255,255,.65); box-shadow: var(--lg-edge); }
 .routine { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 16px; background: rgba(255,255,255,.55); box-shadow: var(--lg-edge); }
 .routine.soon { background: linear-gradient(135deg, rgba(255,61,142,.14), rgba(255,122,48,.12)); }
+.acc-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; width: 100%; border: 0; background: transparent; padding: 0; cursor: pointer; text-align: left; }
+.acc-chev { font-size: 22px; line-height: 1; color: var(--rose-600); transition: transform .3s var(--ease); }
+html.simple *, html.simple *::before { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.simple .glass, html.simple .dialog, html.simple .lb-card, html.simple .cmdk { background: rgba(255,250,253,.94) !important; }

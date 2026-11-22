@@ -5,7 +5,7 @@ import { PageHead } from '../components/Shell';
 import { Field, useToast } from '../components/ui';
 import { useProfile, useSocialAccounts, useUpdateProfile } from '../lib/data';
 import { callDispatcher, disablePush, enablePush, pushActive } from '../lib/notify';
-import { ALL_COUNTRIES, countryName, flag } from '../lib/countries';
+import { CITIES, applySimple, focusMinutes, getPref, setPref } from '../lib/prefs';
 import { supabase } from '../lib/supabase';
 import { todayKey } from '../lib/dates';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,12 +18,6 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState('');
   useEffect(() => { setName(profile.data?.display_name ?? ''); }, [profile.data?.display_name]);
-  const hidden = new Set(profile.data?.hidden_holiday_countries ?? []);
-
-  const toggle = (cc: string) => {
-    const next = new Set(hidden); next.has(cc) ? next.delete(cc) : next.add(cc);
-    update.mutate({ hidden_holiday_countries: [...next] }, { onError: (e) => toast.fail(e) });
-  };
 
   async function exportAll() {
     setExporting(true);
@@ -63,25 +57,7 @@ export default function SettingsPage() {
         <p className="small muted" style={{ marginBottom: 0 }}>Saat dilimi: Europe/Istanbul · Tarih biçimi: Türkçe</p>
       </section>
 
-      <section className="glass panel">
-        <div className="panel-head">
-          <h2>Takvimde gösterilen tatiller</h2>
-          <div className="row">
-            <button type="button" className="btn btn-glass btn-sm" onClick={() => update.mutate({ hidden_holiday_countries: [] })}>Hepsini göster</button>
-            <button type="button" className="btn btn-glass btn-sm" onClick={() => update.mutate({ hidden_holiday_countries: ALL_COUNTRIES.filter((c) => c !== 'TR') })}>Yalnız Türkiye</button>
-          </div>
-        </div>
-        <label className="row small" style={{ marginBottom: 12, cursor: 'pointer' }}>
-          <input id="s-obs" type="checkbox" checked={profile.data?.show_observances ?? true} onChange={(e) => update.mutate({ show_observances: e.target.checked })} />
-          Özel günleri de göster (Anneler Günü, Öğretmenler Günü, 10 Kasım…)
-        </label>
-        <div className="country-grid">
-          {ALL_COUNTRIES.map((cc) => (
-            <label key={cc}><input id={`cc-${cc}`} type="checkbox" checked={!hidden.has(cc)} onChange={() => toggle(cc)} />{flag(cc)} {countryName(cc)}</label>
-          ))}
-        </div>
-        <p className="small muted" style={{ marginBottom: 0 }}>Kaynak: Nager.Date (ülke genelindeki resmî tatiller, 2026–2028). Türkiye'deki dinî bayramlar ay gözlemine göre bir gün kayabileceği için "kesinleşmedi" olarak işaretlidir.</p>
-      </section>
+      <PrefSettings />
 
       <NotificationSettings />
       <AccountSettings />
@@ -177,6 +153,7 @@ function AccountSettings() {
   const qc = useQueryClient();
   const [status, setStatus] = useState<Record<string, boolean> | null>(null);
   const [busy, setBusy] = useState('');
+  const [open, setOpen] = useState(() => location.hash === '#hesaplar' || new URLSearchParams(location.search).has('baglandi') || new URLSearchParams(location.search).has('hata'));
   const callback = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth`;
   useEffect(() => {
     callDispatcher<Record<string, boolean>>({ action: 'status' }).then(setStatus).catch(() => setStatus(null));
@@ -199,7 +176,14 @@ function AccountSettings() {
   }
   return (
     <section className="glass panel" id="hesaplar" style={{ display: 'grid', gap: 12 }}>
-      <div className="panel-head" style={{ marginBottom: 0 }}><h2>Sosyal medya hesapları</h2></div>
+      <button type="button" className="acc-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <h2>Sosyal medya hesapları</h2>
+        <span className="row" style={{ gap: 8 }}>
+          {PLATFORMS.map((pl) => { const a = accounts.data?.find((x) => x.platform === pl.key); return <span key={pl.key} className="chip" style={{ color: a?.status === 'connected' ? 'var(--ok)' : undefined }}>{pl.name} · {a ? (a.status === 'connected' ? 'bağlı' : 'yeniden bağla') : 'bağlı değil'}</span>; })}
+          <span className="acc-chev" style={{ transform: open ? 'rotate(180deg)' : undefined }}>⌄</span>
+        </span>
+      </button>
+      {open && <>
       <p className="small muted" style={{ margin: 0 }}>Zamanlanan içerikler bağlı hesaplarda saatinde otomatik yayınlanır. Bağlı olmayan platformlar için saatinde bildirim alırsınız ve elle yayınlayıp işaretlersiniz. Tokenlar yalnız sunucuda saklanır.</p>
       {PLATFORMS.map((pl) => {
         const acc = accounts.data?.find((a) => a.platform === pl.key);
@@ -220,6 +204,37 @@ function AccountSettings() {
         );
       })}
       <div className="card acc-row"><div><b>Web sitesi</b> <span className="chip">Elle yayın</span><p className="small muted" style={{ margin: '6px 0 0' }}>Sitenizin altyapısını söylediğinizde (WordPress vb.) otomatik yayın eklenebilir.</p></div></div>
+      </>}
+    </section>
+  );
+}
+
+function PrefSettings() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [city, setCity] = useState(() => getPref('city', 'bursa'));
+  const [focus, setFocus] = useState(() => String(focusMinutes()));
+  const [simple, setSimple] = useState(() => getPref('simple', '0') === '1');
+  return (
+    <section className="glass panel">
+      <div className="panel-head"><h2>Görünüm ve tercihler</h2><span className="small muted">Bu cihaza özel</span></div>
+      <div className="grid-3">
+        <Field label="Hava durumu şehri">
+          <select className="select" value={city} onChange={(e) => { setCity(e.target.value); setPref('city', e.target.value); qc.invalidateQueries({ queryKey: ['weather'] }); toast.ok('Şehir güncellendi'); }}>
+            {Object.entries(CITIES).map(([k, c]) => <option key={k} value={k}>{c.name}</option>)}
+          </select>
+        </Field>
+        <Field label="Odak süresi (dk)">
+          <input className="input" type="number" min={5} max={120} value={focus} onChange={(e) => { setFocus(e.target.value); setPref('focus', e.target.value); }} />
+        </Field>
+        <Field label="Görünüm">
+          <label className="row small" style={{ cursor: 'pointer', minHeight: 42 }}>
+            <input type="checkbox" checked={simple} onChange={(e) => { setSimple(e.target.checked); setPref('simple', e.target.checked ? '1' : '0'); applySimple(); }} />
+            Sade mod (cam bulanıklığını kapat, daha hızlı)
+          </label>
+        </Field>
+      </div>
+      <p className="small muted" style={{ marginBottom: 0 }}>Takvimde yalnız Türkiye ve Amerika tatilleri gösterilir. Dinî bayramlar ay gözlemine göre bir gün kayabileceği için “kesinleşmedi” olarak işaretlidir.</p>
     </section>
   );
 }

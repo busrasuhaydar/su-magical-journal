@@ -11,6 +11,7 @@ import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, startOfWeek, todayK
 import { supabase } from '../lib/supabase';
 import { flag } from '../lib/countries';
 import { shareOriginal, useNfts } from '../lib/nft';
+import { focusMinutes } from '../lib/prefs';
 import { IDEA_CATEGORY_LABEL, OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform, type Task } from '../lib/types';
 import { EVENT_KIND_LABEL, PRIORITY_ORDER, PROJECT_STATUS_LABEL } from '../lib/types';
 
@@ -104,11 +105,11 @@ export default function Home() {
             <>
               <w.Icon size={44} color="var(--orange-500)" strokeWidth={1.5} />
               <div className="wtemp">{w.temp}°</div>
-              <div className="wlabel">Bursa · {w.label}</div>
+              <div className="wlabel">{w.city} · {w.label}</div>
               <div className="small muted">Hissedilen {w.feels}° · {w.lo}° / {w.hi}° · yağış %{w.rain}</div>
               <div className="wtip"><Sparkles size={13} /> {w.tip}</div>
             </>
-          ) : <div className="small muted">Bursa hava durumu yükleniyor…</div>}
+          ) : <div className="small muted">Hava durumu yükleniyor…</div>}
         </div>
       </section>
 
@@ -270,7 +271,7 @@ function TodoList() {
 
 function FocusTimer({ title }: { title?: string }) {
   const [end, setEnd] = useState<number | null>(null);
-  const [left, setLeft] = useState(25 * 60);
+  const [left, setLeft] = useState(focusMinutes() * 60);
   const toast = useToast();
   const doneRef = useRef(false);
   useEffect(() => {
@@ -279,7 +280,7 @@ function FocusTimer({ title }: { title?: string }) {
     const t = setInterval(() => {
       const l = Math.max(0, Math.round((end - Date.now()) / 1000));
       setLeft(l);
-      if (l === 0 && !doneRef.current) { doneRef.current = true; setEnd(null); setLeft(25 * 60); toast.ok('Odak süresi bitti, mola ver ☕'); }
+      if (l === 0 && !doneRef.current) { doneRef.current = true; setEnd(null); setLeft(focusMinutes() * 60); toast.ok('Odak süresi bitti, mola ver ☕'); }
     }, 500);
     return () => clearInterval(t);
   }, [end]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -288,12 +289,12 @@ function FocusTimer({ title }: { title?: string }) {
     <section className="glass panel focus">
       <div className="panel-head"><h2>Odak <Timer size={16} color="var(--rose-500)" /></h2></div>
       <div className="focus-t mono">{mm}:{ss}</div>
-      <p className="small muted" style={{ textAlign: 'center', margin: '0 0 10px' }}>{title ? `Odak: ${title}` : '25 dk kesintisiz çalış, sonra mola'}</p>
+      <p className="small muted" style={{ textAlign: 'center', margin: '0 0 10px' }}>{title ? `Odak: ${title}` : `${focusMinutes()} dk kesintisiz çalış, sonra mola`}</p>
       <div className="row" style={{ justifyContent: 'center' }}>
         {end == null
           ? <button type="button" className="btn btn-primary btn-sm" onClick={() => setEnd(Date.now() + left * 1000)}><Play size={14} />Başlat</button>
           : <button type="button" className="btn btn-glass btn-sm" onClick={() => { setEnd(null); }}><Pause size={14} />Duraklat</button>}
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setEnd(null); setLeft(25 * 60); }}><RotateCcw size={14} />Sıfırla</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setEnd(null); setLeft(focusMinutes() * 60); }}><RotateCcw size={14} />Sıfırla</button>
       </div>
     </section>
   );

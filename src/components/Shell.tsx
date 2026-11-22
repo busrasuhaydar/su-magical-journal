@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, CalendarHeart, CheckSquare, FolderHeart, Home, Settings, Files, Plus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, LogOut, Sparkles, Megaphone, Users, Lightbulb, Landmark, Images, Gem } from 'lucide-react';
 import { formatLong, minutesOf, hhmm, todayKey } from '../lib/dates';
 import { useProfile } from '../lib/data';
+import { currentCity } from '../lib/prefs';
 import { supabase } from '../lib/supabase';
 import { useEditors } from './Editors';
 import { NotificationBell } from './NotificationBell';
@@ -23,11 +24,12 @@ const WMO: [number[], string, typeof Sun][] = [
 ];
 export function useWeather() {
   return useQuery({
-    queryKey: ['weather', 'bursa'],
+    queryKey: ['weather', currentCity().name],
     staleTime: 30 * 60_000,
     retry: 0,
     queryFn: async () => {
-      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.19&longitude=29.06&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FIstanbul&forecast_days=1');
+      const c = currentCity();
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FIstanbul&forecast_days=1`);
       if (!r.ok) throw new Error('hava durumu');
       const j = await r.json();
       const code = j.current.weather_code as number;
@@ -45,7 +47,7 @@ export function useWeather() {
       else if (temp >= 29) tips.push('Sıcak, bol su iç');
       if (wind >= 30) tips.push('Rüzgâr sert');
       if (!tips.length) tips.push(m[1] === 'Açık' ? 'Hava güzel, kısa bir yürüyüş iyi gelir' : 'Çıkmak için uygun bir gün');
-      return { temp, feels: Math.round(j.current.apparent_temperature as number), label: m[1], Icon: m[2], rain, hi, lo, wind, tip: tips.join(' · ') };
+      return { city: c.name, temp, feels: Math.round(j.current.apparent_temperature as number), label: m[1], Icon: m[2], rain, hi, lo, wind, tip: tips.join(' · ') };
     },
   });
 }
@@ -62,7 +64,7 @@ export function Clock() {
       {w.data && (
         <div className="weather" title="Open-Meteo">
           <w.data.Icon size={20} color="var(--orange-500)" />
-          <span><b>{w.data.temp}°C</b><br />Bursa · {w.data.label}</span>
+          <span><b>{w.data.temp}°C</b><br />{w.data.city} · {w.data.label}</span>
         </div>
       )}
     </div>
