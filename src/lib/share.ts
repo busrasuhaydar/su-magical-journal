@@ -26,12 +26,11 @@ export type ShareResult = { method: 'sheet' | 'intent' | 'manual'; note: string 
 /** Düğme tıklamasının içinde çağrılmalı (tarayıcı izni için). */
 export async function shareTo(platform: 'x' | 'instagram', text: string, media: FileRec[]): Promise<ShareResult> {
   const images = media.filter((m) => m.mime.startsWith('image/') || m.mime.startsWith('video/'));
-  const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
   // Instagram metni paylaş menüsünden almaz: önce panoya
   if (platform === 'instagram') { try { await navigator.clipboard.writeText(text); } catch { /* yok say */ } }
 
   // 1) Paylaş menüsü (telefonda görsel + metin birlikte)
-  if (mobile && images.length && navigator.canShare) {
+  if (images.length && navigator.canShare) {
     const files = await toFiles(images.slice(0, platform === 'x' ? 4 : 10));
     if (navigator.canShare({ files })) {
       await navigator.share({ files, text: platform === 'x' ? text : undefined });

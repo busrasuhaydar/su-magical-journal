@@ -61,7 +61,6 @@ const NAV: [string, string, typeof Home][] = [
   ['/gorevler', 'Görevler', CheckSquare], ['/projeler', 'Projelerim', FolderHeart], ['/sosyal', 'Sosyal Medya', Megaphone], ['/firsatlar', 'Sergiler ve Fırsatlar', Landmark],
   ['/kisiler', 'Kişiler', Users], ['/fikirler', 'Fikirler ve Notlar', Lightbulb], ['/galeri', 'Ortak Galeri', Images], ['/dosyalar', 'Dosyalar', Files], ['/ayarlar', 'Ayarlar', Settings],
 ];
-const SOON: [string, string][] = [ ['Zaman Makinesi', 'Faz 5'], ['Finans', 'Faz 5'], ['Raporlar', 'Faz 5']];
 
 export function Shell() {
   const profile = useProfile();
@@ -79,8 +78,6 @@ export function Shell() {
           {NAV.map(([to, label, Icon]) => (
             <NavLink key={to} to={to} end={to === '/'} title={label}><Icon size={18} strokeWidth={1.75} /><span className="lbl">{label}</span></NavLink>
           ))}
-          <div className="nav-label">Yakında</div>
-          {SOON.map(([l, p]) => <span key={l} className="soon">{l}<em>{p}</em></span>)}
         </nav>
         <div style={{ marginTop: 'auto', display: 'grid', gap: 8 }}>
           <button type="button" className="btn btn-primary" onClick={() => openTask({ due_date: todayKey() })}><Plus size={16} /><span className="lbl">Hızlı görev</span></button>
