@@ -789,3 +789,7 @@ html.simple .glass, html.simple .dialog, html.simple .lb-card, html.simple .cmdk
 .btn.icon-btn svg { width: 18px; height: 18px; }
 .auto-ic { display: inline-flex; flex: none; }
 .auto-ic svg { width: 14px; height: 14px; }
+@media (max-width: 1100px) and (min-width: 761px) {
+  .sidebar .btn { width: 44px; height: 44px; padding: 0; justify-self: center; border-radius: 50%; }
+  .sidebar .btn .lbl { display: none; }
+}

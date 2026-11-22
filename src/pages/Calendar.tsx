@@ -58,7 +58,7 @@ function Legend() {
   return (
     <div className="legend">
       <span><i className="k-task" />Görev</span><span><i className="k-event" />Etkinlik</span><span><i className="k-post" />Sosyal yayın</span><span><i className="k-exhibition" />Sergi / başvuru / kilometre taşı</span><span><i className="k-deadline" />Takip</span><span><i className="k-done" />Tamamlanan</span>
-      <span><i className="k-holiday" />Türkiye tatili</span><span><i className="k-foreign" />Diğer ülke tatili</span>
+      <span><i className="k-holiday" />Türkiye tatili</span><span><i className="k-foreign" />ABD tatili</span>
       <span>Kesik kenar: tarihi kesinleşmedi</span>
     </div>
   );
