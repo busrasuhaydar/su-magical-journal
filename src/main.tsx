@@ -18,6 +18,7 @@ import SettingsPage from './pages/Settings';
 import SocialPage from './pages/Social';
 import ContactsPage from './pages/Contacts';
 import IdeasPage from './pages/Ideas';
+import NftCollectionsPage from './pages/NftCollections';
 import ProjectWorkspace from './pages/project/Workspace';
 import OpportunitiesPage from './pages/Opportunities';
 import CommonGallery from './pages/Gallery';
@@ -44,6 +45,7 @@ function App() {
           <Route path="firsatlar/:id?" element={<OpportunitiesPage />} />
           <Route path="kisiler" element={<ContactsPage />} />
           <Route path="fikirler" element={<IdeasPage />} />
+          <Route path="koleksiyonlar" element={<NftCollectionsPage />} />
           <Route path="galeri" element={<CommonGallery />} />
           <Route path="dosyalar" element={<FilesPage />} />
           <Route path="ayarlar" element={<SettingsPage />} />

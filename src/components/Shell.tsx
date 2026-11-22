@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, CalendarHeart, CheckSquare, FolderHeart, Home, Settings, Files, Plus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, LogOut, Sparkles, Megaphone, Users, Lightbulb, Landmark, Images } from 'lucide-react';
+import { CalendarDays, CalendarHeart, CheckSquare, FolderHeart, Home, Settings, Files, Plus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, LogOut, Sparkles, Megaphone, Users, Lightbulb, Landmark, Images, Gem } from 'lucide-react';
 import { formatLong, minutesOf, hhmm, todayKey } from '../lib/dates';
 import { useProfile } from '../lib/data';
 import { supabase } from '../lib/supabase';
@@ -72,7 +72,7 @@ export function Clock() {
 const NAV: [string, string, typeof Home][] = [
   ['/', 'Ana Sayfa', Home], ['/takvim/yil', 'Takvim', CalendarDays], ['/gun', 'Günlük Plan', CalendarHeart],
   ['/gorevler', 'Görevler', CheckSquare], ['/projeler', 'Projelerim', FolderHeart], ['/sosyal', 'Sosyal Medya', Megaphone], ['/firsatlar', 'Sergiler ve Fırsatlar', Landmark],
-  ['/kisiler', 'Kişiler', Users], ['/fikirler', 'Fikirler ve Notlar', Lightbulb], ['/galeri', 'Ortak Galeri', Images], ['/dosyalar', 'Dosyalar', Files], ['/ayarlar', 'Ayarlar', Settings],
+  ['/kisiler', 'Kişiler', Users], ['/fikirler', 'Fikirler ve Notlar', Lightbulb], ['/galeri', 'Ortak Galeri', Images], ['/koleksiyonlar', 'Koleksiyonlarım', Gem], ['/dosyalar', 'Dosyalar', Files], ['/ayarlar', 'Ayarlar', Settings],
 ];
 
 export function Shell() {
