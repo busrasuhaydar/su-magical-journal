@@ -6,5 +6,4 @@ export const CITIES: Record<string, { name: string; lat: number; lon: number }> 
 export function getPref(k: string, d: string) { try { return localStorage.getItem(`su:${k}`) ?? d; } catch { return d; } }
 export function setPref(k: string, v: string) { try { localStorage.setItem(`su:${k}`, v); } catch { /* yok say */ } }
 export const currentCity = () => CITIES[getPref('city', 'bursa')] ?? CITIES.bursa;
-export const focusMinutes = () => Math.min(120, Math.max(5, Number(getPref('focus', '25')) || 25));
 export function applySimple() { document.documentElement.classList.toggle('simple', getPref('simple', '0') === '1'); }

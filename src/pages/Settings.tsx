@@ -5,7 +5,7 @@ import { PageHead } from '../components/Shell';
 import { Field, useToast } from '../components/ui';
 import { useProfile, useSocialAccounts, useUpdateProfile } from '../lib/data';
 import { callDispatcher, disablePush, enablePush, pushActive } from '../lib/notify';
-import { CITIES, applySimple, focusMinutes, getPref, setPref } from '../lib/prefs';
+import { CITIES, applySimple, getPref, setPref } from '../lib/prefs';
 import { supabase } from '../lib/supabase';
 import { todayKey } from '../lib/dates';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -213,19 +213,15 @@ function PrefSettings() {
   const qc = useQueryClient();
   const toast = useToast();
   const [city, setCity] = useState(() => getPref('city', 'bursa'));
-  const [focus, setFocus] = useState(() => String(focusMinutes()));
   const [simple, setSimple] = useState(() => getPref('simple', '0') === '1');
   return (
     <section className="glass panel">
       <div className="panel-head"><h2>Görünüm ve tercihler</h2><span className="small muted">Bu cihaza özel</span></div>
-      <div className="grid-3">
+      <div className="grid-2">
         <Field label="Hava durumu şehri">
           <select className="select" value={city} onChange={(e) => { setCity(e.target.value); setPref('city', e.target.value); qc.invalidateQueries({ queryKey: ['weather'] }); toast.ok('Şehir güncellendi'); }}>
             {Object.entries(CITIES).map(([k, c]) => <option key={k} value={k}>{c.name}</option>)}
           </select>
-        </Field>
-        <Field label="Odak süresi (dk)">
-          <input className="input" type="number" min={5} max={120} value={focus} onChange={(e) => { setFocus(e.target.value); setPref('focus', e.target.value); }} />
         </Field>
         <Field label="Görünüm">
           <label className="row small" style={{ cursor: 'pointer', minHeight: 42 }}>
@@ -234,7 +230,7 @@ function PrefSettings() {
           </label>
         </Field>
       </div>
-      <p className="small muted" style={{ marginBottom: 0 }}>Takvimde yalnız Türkiye ve Amerika tatilleri gösterilir. Dinî bayramlar ay gözlemine göre bir gün kayabileceği için “kesinleşmedi” olarak işaretlidir.</p>
+      <p className="small muted" style={{ marginBottom: 0 }}>Takvimde yalnız Türkiye ve Amerika tatilleri gösterilir. 2026 ve 2027 dinî bayramları Diyanet takvimiyle kesinleşti; 2028 bayramları Diyanet yayımlayana kadar “kesinleşmedi” görünür.</p>
     </section>
   );
 }
