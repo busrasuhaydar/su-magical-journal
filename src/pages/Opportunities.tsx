@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Bell, CalendarClock, CheckCircle2, ExternalLink, FileText, Link2, Plus, Sparkles, Upload, Wand2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Bell, CalendarClock, CheckCircle2, ExternalLink, FileText, Link2, Plus, Sparkles, Upload, Wand2 } from 'lucide-react';
 import { PageHead } from '../components/Shell';
 import { TaskRow } from '../components/TaskRow';
 import { useEditors } from '../components/Editors';
@@ -224,7 +224,7 @@ function IntakeDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
             </div>
           )}
           {err && <div className="error">{err}</div>}
-          <div className="foot"><button type="button" className="btn btn-ghost" onClick={() => setEx(null)}>← Geri</button><div className="row">
+          <div className="foot"><button type="button" className="btn btn-ghost" onClick={() => setEx(null)}><ArrowLeft size={14} />Geri</button><div className="row">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
             <button type="button" className="btn btn-primary" disabled={busy} onClick={create}>{busy ? 'Kaydediliyor…' : 'Fırsatı oluştur'}</button>
           </div></div>
@@ -306,7 +306,7 @@ function OpportunityDetail({ id }: { id: string }) {
   return (
     <>
       <PageHead title={o.title}>
-        <Link className="btn btn-glass btn-sm" to="/firsatlar">← Tüm fırsatlar</Link>
+        <Link className="btn btn-glass btn-sm" to="/firsatlar"><ArrowLeft size={14} />Tüm fırsatlar</Link>
         <select id="od-status" className="select" style={{ width: 'auto', borderColor: OPP_STATUS_COLOR[o.status], fontWeight: 600 }} value={o.status} onChange={(e) => upd({ status: e.target.value as OppStatus })}>
           {PIPE.map((s) => <option key={s} value={s}>{OPP_STATUS_LABEL[s]}</option>)}
         </select>

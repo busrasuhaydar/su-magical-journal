@@ -100,8 +100,7 @@ export function Shell() {
         </div>
       </aside>
       <main className="main">
-        <QuickSearch />
-        <NotificationBell />
+        <div className="utilbar"><QuickSearch /><NotificationBell /></div>
         <Outlet />
       </main>
       <nav className="tabbar" aria-label="Alt menü">

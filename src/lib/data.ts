@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, sha256, slugify } from './supabase';
-import { addDays, toInstant, todayKey, type DayKey } from './dates';
+import { addDays, addMonths, toInstant, todayKey, type DayKey } from './dates';
 import type { CalEvent, CalendarEntry, FileRec, Holiday, JournalBlock, JournalDay, Profile, Project, ProjectProgress, Task } from './types';
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 } } });
@@ -92,20 +92,44 @@ export function useUpdateProfile() {
 
 // ── Takvim aralığı ─────────────────────────────────────
 export type CalOppDate = import('./types').OppDate & { opportunities: { title: string; status: import('./types').OppStatus } | null };
-export interface CalData { tasks: Task[]; events: CalEvent[]; posts: import('./types').SocialPost[]; oppDates: CalOppDate[] }
+export interface CalExtra { id: string; day: DayKey; label: string; kind: 'followup' | 'milestone' | 'project' | 'repeat'; href?: string }
+export interface CalData { tasks: Task[]; events: CalEvent[]; posts: import('./types').SocialPost[]; oppDates: CalOppDate[]; extras: CalExtra[] }
+/** Tekrarlayan görevin (ör. 15 günde bir) aralıktaki gelecek örnekleri. */
+function projectRepeats(t: Task, from: DayKey, to: DayKey): CalExtra[] {
+  if (!t.rrule || !t.due_date) return [];
+  const freq = /FREQ=([A-Z]+)/.exec(t.rrule)?.[1], n = Number(/INTERVAL=(\d+)/.exec(t.rrule)?.[1] ?? 1);
+  const out: CalExtra[] = [];
+  let k = t.due_date;
+  for (let i = 0; i < 400; i++) {
+    k = freq === 'DAILY' ? addDays(k, n) : freq === 'WEEKLY' ? addDays(k, 7 * n) : freq === 'MONTHLY' ? addMonths(k, n) : addMonths(k, 12 * n);
+    if (k > to) break;
+    if (k >= from) out.push({ id: `rep-${t.id}-${k}`, day: k, label: `↻ ${t.title}`, kind: 'repeat' });
+  }
+  return out;
+}
 export function useCalendarRange(from: DayKey, to: DayKey) {
   return useQuery({
     queryKey: ['cal', from, to],
     queryFn: async (): Promise<CalData> => {
       const start = toInstant(from, 0), end = toInstant(addDays(to, 1), 0);
-      const [timed, dated, events, posts, oppDates] = await Promise.all([
+      const [timed, dated, events, posts, oppDates, contacts, stages, projs, repeating] = await Promise.all([
         run<Task[]>(supabase.from('tasks').select('*').is('deleted_at', null).lt('starts_at', end).gte('ends_at', start)),
         run<Task[]>(supabase.from('tasks').select('*').is('deleted_at', null).is('starts_at', null).gte('due_date', from).lte('due_date', to)),
         run<CalEvent[]>(supabase.from('events').select('*').is('deleted_at', null).lt('starts_at', end).gte('ends_at', start)),
         run<import('./types').SocialPost[]>(supabase.from('social_posts').select('*, post_targets(*)').is('deleted_at', null).gte('scheduled_at', start).lt('scheduled_at', end)),
         run<CalOppDate[]>(supabase.from('opportunity_dates').select('*, opportunities!inner(title,status,deleted_at)').is('opportunities.deleted_at', null).gte('day', from).lte('day', to)),
+        run<{ id: string; name: string; follow_up_date: string }[]>(supabase.from('contacts').select('id,name,follow_up_date').is('deleted_at', null).gte('follow_up_date', from).lte('follow_up_date', to)),
+        run<{ id: string; title: string; due_date: string; project_id: string; projects: { slug: string; title: string }[] | { slug: string; title: string } | null }[]>(supabase.from('project_stages').select('id,title,due_date,project_id,projects(slug,title)').is('deleted_at', null).gte('due_date', from).lte('due_date', to)),
+        run<{ id: string; title: string; slug: string; target_date: string }[]>(supabase.from('projects').select('id,title,slug,target_date').is('deleted_at', null).neq('status', 'completed').gte('target_date', from).lte('target_date', to)),
+        run<Task[]>(supabase.from('tasks').select('*').is('deleted_at', null).not('rrule', 'is', null).in('status', ['todo', 'doing']).not('due_date', 'is', null)),
       ]);
-      return { tasks: [...timed, ...dated], events, posts, oppDates };
+      const extras: CalExtra[] = [
+        ...contacts.map((c) => ({ id: `fu-${c.id}`, day: c.follow_up_date, label: `☺ Takip: ${c.name}`, kind: 'followup' as const, href: 'kisiler' })),
+        ...stages.map((x) => { const pr = Array.isArray(x.projects) ? x.projects[0] : x.projects; return { id: `st-${x.id}`, day: x.due_date, label: `◆ ${x.title}${pr ? ` · ${pr.title}` : ''}`, kind: 'milestone' as const, href: pr ? `projeler/${pr.slug}` : undefined }; }),
+        ...projs.map((x) => ({ id: `pj-${x.id}`, day: x.target_date, label: `⚑ Hedef: ${x.title}`, kind: 'project' as const, href: `projeler/${x.slug}` })),
+        ...repeating.flatMap((t) => projectRepeats(t, from, to)),
+      ];
+      return { tasks: [...timed, ...dated], events, posts, oppDates, extras };
     },
   });
 }

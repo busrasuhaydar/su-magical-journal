@@ -1,7 +1,7 @@
 // Ortak galeri: tüm projelerin, günlüğün ve paylaşımların görselleri tek yerde. Dosya bir kez saklanır, istediğiniz projeye bağlanır.
 import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckSquare, FolderPlus, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, CheckSquare, FolderPlus, Trash2, Upload, X } from 'lucide-react';
 import { PageHead } from '../components/Shell';
 import { ConfirmButton, Empty, formatBytes, useToast } from '../components/ui';
 import { addToGallery, softDeleteFiles, uploadFile, useFileLinks, useFiles, useProjects, useSignedUrl } from '../lib/data';
@@ -155,7 +155,7 @@ function NftPane() {
         </div>
       ) : (
         <>
-          {col && <div className="row" style={{ marginBottom: 12 }}><button type="button" className="btn btn-glass btn-sm" onClick={() => setCol('')}>← Tüm koleksiyonlar</button><h3>{nfts.data?.collections.find((c) => c.slug === col)?.name}</h3></div>}
+          {col && <div className="row" style={{ marginBottom: 12 }}><button type="button" className="btn btn-glass btn-sm" onClick={() => setCol('')}><ArrowLeft size={14} />Tüm koleksiyonlar</button><h3>{nfts.data?.collections.find((c) => c.slug === col)?.name}</h3></div>}
           {list.length === 0 ? <Empty title="Eser yok">Aramayı değiştir.</Empty> : <div className="nft-grid">{list.map((n, i) => <Card key={nftKey(n)} n={n} onOpen={() => setLb(i)} />)}</div>}
         </>
       )}

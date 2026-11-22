@@ -750,3 +750,17 @@ h1 { font-size: 36px; } h2 { font-size: 25px; } h3 { font-size: 19px; }
 .acc-chev { font-size: 22px; line-height: 1; color: var(--rose-600); transition: transform .3s var(--ease); }
 html.simple *, html.simple *::before { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 html.simple .glass, html.simple .dialog, html.simple .lb-card, html.simple .cmdk { background: rgba(255,250,253,.94) !important; }
+
+/* ── Arama ve bildirim düğmeleri artık akışın içinde: hiçbir şeyin üstüne binmez ── */
+.utilbar { position: relative; z-index: 45; display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: -12px; }
+.utilbar .search-btn { position: static; top: auto; right: auto; }
+.utilbar .bell-wrap { position: relative; top: auto; right: auto; }
+.main > .topbar:first-of-type { padding-right: 0 !important; }
+.pill.extra { border-style: dashed; cursor: default; }
+.pill.followup { border-color: var(--teal-500); background: var(--ocean-100); color: #11615F; }
+.pill.milestone { border-color: var(--orange-500); background: #FFF0E6; color: #9A4A14; }
+.pill.project { border-color: var(--rose-500); background: var(--blush-100); color: var(--rose-700); }
+.pill.repeat { border-color: var(--teal-500); background: #EAFBF8; color: #0E6B67; opacity: .9; }
+.pill.extra[style*="pointer"] { cursor: pointer; }
+.mcell .pill.followup, .mcell .pill.milestone, .mcell .pill.project, .mcell .pill.repeat { color: #fff; border-style: solid; }
+.mcell .pill.followup, .mcell .pill.repeat { background: var(--teal-500); } .mcell .pill.milestone { background: var(--orange-500); } .mcell .pill.project { background: var(--rose-700); }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent, type PointerEvent as RPE } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Plus, Link2, FileText, Music, Film, StickyNote, Trash2, Maximize2, Upload, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Link2, FileText, Music, Film, StickyNote, Trash2, Maximize2, Upload, ExternalLink, CalendarCheck } from 'lucide-react';
 import { PageHead } from '../components/Shell';
 import { useEditors } from '../components/Editors';
 import { TimeGrid, movedTimes } from '../components/TimeGrid';
@@ -39,7 +39,7 @@ function DayInner({ day }: { day: DayKey }) {
       <PageHead title={<>{formatLong(day)}{isToday && <span className="script" style={{ fontSize: 26, marginLeft: 12 }}>bugün</span>}</>}>
         <div className="row" style={{ gap: 4 }}>
           <button type="button" className="btn btn-glass icon-btn" onClick={() => nav(`/gun/${addDays(day, -1)}`)} aria-label="Önceki gün"><ChevronLeft size={18} /></button>
-          {!isToday && <Link className="btn btn-glass btn-sm" to={`/gun/${todayKey()}`}>Bugün</Link>}
+          {!isToday && <Link className="btn btn-glass btn-sm" to={`/gun/${todayKey()}`}><CalendarCheck size={14} />Bugün</Link>}
           <button type="button" className="btn btn-glass icon-btn" onClick={() => nav(`/gun/${addDays(day, 1)}`)} aria-label="Sonraki gün"><ChevronRight size={18} /></button>
         </div>
         <button type="button" className="btn btn-glass" onClick={() => openEvent({ starts_at: movedTimes(day, 600, 660).starts_at, ends_at: movedTimes(day, 600, 660).ends_at })}><Plus size={15} />Etkinlik</button>

@@ -1,5 +1,5 @@
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { PageHead } from '../components/Shell';
 import { useEditors } from '../components/Editors';
 import { TimeGrid, movedTimes, type GridItem } from '../components/TimeGrid';
@@ -40,7 +40,7 @@ function CalendarInner({ view, d }: { view: string; d: DayKey }) {
         </div>
         <div className="row" style={{ gap: 4 }}>
           <button type="button" className="btn btn-glass icon-btn" onClick={() => step(-1)} aria-label="Önceki"><ChevronLeft size={18} /></button>
-          <button type="button" className="btn btn-glass btn-sm" onClick={() => nav(`/takvim/${view}/${todayKey()}`)}>Bugün</button>
+          <button type="button" className="btn btn-glass btn-sm" onClick={() => nav(`/takvim/${view}/${todayKey()}`)}><CalendarCheck size={14} />Bugün</button>
           <button type="button" className="btn btn-glass icon-btn" onClick={() => step(1)} aria-label="Sonraki"><ChevronRight size={18} /></button>
         </div>
         <button type="button" className="btn btn-glass" onClick={() => openEvent({ starts_at: undefined })}><Plus size={15} />Etkinlik</button>
@@ -140,6 +140,9 @@ function pillsFor(day: DayKey, data: CalData | undefined, hols: Holiday[], openT
       out.push({ id: d.id, label: `🏛 ${OPP_DATE_LABEL[d.kind]}: ${d.opportunities.title}`, cls: `opp${confirmed ? ' confirmed' : ''}${d.certainty !== 'confirmed' ? ' uncertain' : ''}`, sort: d.kind === 'deadline' ? -0.5 : 0.5, onClick: () => { window.location.assign(`${import.meta.env.BASE_URL}firsatlar/${d.opportunity_id}`); } });
     }
   }
+  for (const x of data?.extras ?? []) {
+    if (x.day === day) out.push({ id: x.id, label: x.label, cls: `extra ${x.kind}`, sort: 2, onClick: x.href ? () => { window.location.assign(`${import.meta.env.BASE_URL}${x.href}`); } : undefined });
+  }
   for (const p of data?.posts ?? []) {
     if (p.scheduled_at && dayKeyOf(p.scheduled_at) === day)
       out.push({ id: p.id, label: `${hhmm(minutesOf(p.scheduled_at))} ✦ ${p.title}`, cls: `post${p.status === 'published' ? ' done' : ''}`, sort: minutesOf(p.scheduled_at), onClick: openPost ? () => openPost(p) : undefined });
@@ -213,6 +216,7 @@ function WeekView({ d }: { d: DayKey }) {
   const allDay = new Map(days.map((k) => [k, [
     ...(data.data?.events ?? []).filter((e) => e.all_day && dayKeyOf(e.starts_at) <= k && dayKeyOf(e.ends_at) >= k).map((e) => ({ label: e.title, cls: 'event', onClick: () => openEvent(e) })),
     ...(data.data?.tasks ?? []).filter((t) => !t.starts_at && t.due_date === k && t.status !== 'cancelled').map((t) => ({ label: t.title, cls: `task${t.status === 'done' ? ' done' : ''}`, onClick: () => openTask(t) })),
+    ...(data.data?.extras ?? []).filter((x) => x.day === k).map((x) => ({ label: x.label, cls: `extra ${x.kind}`, onClick: x.href ? () => { window.location.assign(`${import.meta.env.BASE_URL}${x.href}`); } : (() => {}) })),
     ...(data.data?.posts ?? []).filter((p) => p.scheduled_at && dayKeyOf(p.scheduled_at) === k).map((p) => ({ label: `${hhmm(minutesOf(p.scheduled_at!))} ✦ ${p.title}`, cls: `post${p.status === 'published' ? ' done' : ''}`, onClick: () => openPost(p) })),
   ]]));
   return (
