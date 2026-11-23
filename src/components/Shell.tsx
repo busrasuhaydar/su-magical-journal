@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, CalendarHeart, CheckSquare, FolderHeart, Home, Settings, Files, Plus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, LogOut, Megaphone, Users, Lightbulb, Landmark, Images, Gem, LayoutGrid } from 'lucide-react';
@@ -78,12 +78,54 @@ const NAV: [string, string, typeof Home][] = [
   ['/kisiler', 'Kişiler', Users], ['/fikirler', 'Fikirler ve Notlar', Lightbulb], ['/galeri', 'Ortak Galeri', Images], ['/koleksiyonlar', 'Koleksiyonlarım', Gem], ['/dosyalar', 'Dosyalar', Files], ['/ayarlar', 'Ayarlar', Settings],
 ];
 
+
+/** Sihirli defter efektleri: sayfa çevirme + tıklamada pırıltı. Yalnız transform/opacity (GPU); sade mod ve "hareketi azalt"ta kapalı. */
+function useMagicBook(mainRef: React.RefObject<HTMLElement>, sweepRef: React.RefObject<HTMLDivElement>, path: string) {
+  const first = useRef(true);
+  const off = () => document.documentElement.classList.contains('simple') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    if (off() || !mainRef.current?.animate) return;
+    window.scrollTo({ top: 0 });
+    mainRef.current.animate(
+      [{ transform: 'perspective(1500px) rotateY(-16deg) translateX(-14px)', opacity: 0.0, transformOrigin: 'left center' },
+       { transform: 'perspective(1500px) rotateY(-4deg)', opacity: 1, offset: 0.55, transformOrigin: 'left center' },
+       { transform: 'none', opacity: 1, transformOrigin: 'left center' }],
+      { duration: 620, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    sweepRef.current?.animate(
+      [{ transform: 'translateX(-110%)', opacity: 0 }, { opacity: 0.9, offset: 0.35 }, { transform: 'translateX(240%)', opacity: 0 }],
+      { duration: 760, easing: 'ease-out' });
+  }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const colors = ['#FF3D8E', '#FFC94D', '#00D9D0', '#fff', '#B58CFF'];
+    const burst = (e: PointerEvent) => {
+      if (off()) return;
+      const t = e.target as HTMLElement | null;
+      if (!t?.closest('.btn-primary, .check, .tabbar a, .nav a')) return;
+      for (let i = 0; i < 7; i++) {
+        const d = document.createElement('i');
+        d.setAttribute('aria-hidden', 'true');
+        d.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;width:7px;height:7px;margin:-3px;border-radius:50%;pointer-events:none;z-index:300;background:${colors[i % colors.length]}`;
+        document.body.appendChild(d);
+        const a = (Math.PI * 2 * i) / 7 + Math.random() * 0.6, r = 26 + Math.random() * 22;
+        const an = d.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(a) * r}px,${Math.sin(a) * r}px) scale(.2)`, opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        an.onfinish = () => d.remove();
+      }
+    };
+    document.addEventListener('pointerdown', burst, { passive: true });
+    return () => document.removeEventListener('pointerdown', burst);
+  }, []);
+}
+
 export function Shell() {
   const profile = useProfile();
   const { openTask } = useEditors();
   const nav = useNavigate();
   const [more, setMore] = useState(false);
   const loc = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const sweepRef = useRef<HTMLDivElement>(null);
+  useMagicBook(mainRef, sweepRef, loc.pathname);
   useEffect(() => { setMore(false); }, [loc.pathname]);
   return (
     <div className="app">
@@ -103,7 +145,8 @@ export function Shell() {
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => supabase.auth.signOut().then(() => nav('/'))}><LogOut size={14} /><span className="lbl">Çıkış yap</span></button>
         </div>
       </aside>
-      <main className="main">
+      <div className="page-sweep" ref={sweepRef} aria-hidden="true" />
+      <main className="main" ref={mainRef}>
         <div className="utilbar"><QuickSearch /><NotificationBell /></div>
         <Outlet />
       </main>

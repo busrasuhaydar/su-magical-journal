@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabase';
 import { flag } from '../lib/countries';
 import { REMINDER_OPTIONS, RRULE_LABEL } from '../lib/types';
 import { shareOriginal, useNfts } from '../lib/nft';
-import { bostonDay, bostonTime, useHomePrefs } from '../lib/ui';
+import { bostonTime, useHomePrefs } from '../lib/ui';
 import { IDEA_CATEGORY_LABEL, OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform, type Task } from '../lib/types';
 import { EVENT_KIND_LABEL, PRIORITY_ORDER, PROJECT_STATUS_LABEL } from '../lib/types';
 
@@ -114,7 +114,7 @@ export default function Home() {
               <div className="wtip"><Sparkles size={13} /> {w.tip}</div>
             </>
           ) : <div className="small muted">Hava durumu yükleniyor…</div>}
-          {hp.boston && <div className="boston" title="Boston (ABD Doğu saati)">🇺🇸 Boston <b className="mono">{bostonTime(now)}</b> <span className="muted">{bostonDay(now)}</span></div>}
+          {hp.boston && <div className="boston" title="Boston (ABD Doğu saati)" aria-label={`ABD saati ${bostonTime(now)}`}>🇺🇸 <b className="mono">{bostonTime(now)}</b></div>}
         </div>
       </section>
 
