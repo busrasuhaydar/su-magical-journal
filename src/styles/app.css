@@ -907,3 +907,26 @@ html.simple .main > *, html.simple .home-grid > *, html.simple .tabbar .plus { a
   body::after, .btn-primary::after, .hero-main .script::after { display: none; }
   .main > *, .home-grid > *, .dialog, .more-grid > *, .tabbar .plus, .tabbar a.active svg { animation: none; }
 }
+
+/* Mobil görsel penceresi: resim üstte sabit, altındaki her şey (açıklama, paylaş, kopyala, ekle) kaydırılır; zemin opak, yazı bulanık görünmez */
+@media (max-width: 860px) {
+  .lb .lb-card {
+    display: flex; flex-direction: column; gap: 0; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh;
+    overflow: hidden; padding: 10px 10px 0; border-radius: 0; background: rgba(255,250,253,.98);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .lb .lb-stage { flex: none; height: 42vh; height: 42dvh; }
+  .lb .lb-info {
+    flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    padding: 12px 4px calc(24px + env(safe-area-inset-bottom)); background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .lb .lb-strip { display: none; }
+  .lb .lb-nav { top: calc(10px + 21vh); top: calc(10px + 21dvh); }
+  .lb .lb-x { top: max(14px, env(safe-area-inset-top)); }
+}
+/* Dosya görüntüleyici (Galeri / proje galerisi): görsel sabit, yan panel kaydırılır */
+@media (max-width: 1100px) {
+  .lightbox { padding: 0; }
+  .lightbox .lb-body { height: 100vh; height: 100dvh; max-height: 100dvh; border-radius: 0; grid-template-rows: minmax(0, 45%) minmax(0, 1fr); background: rgba(255,250,253,.98); }
+  .lightbox .lb-side { max-height: none; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
