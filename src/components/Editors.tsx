@@ -2,8 +2,9 @@
 import { createContext, useContext, useState, type FormEvent, type ReactNode } from 'react';
 import { useProjects, useSaveEvent, useSaveTask, useSoftDelete, useCompleteTask, useTasks } from '../lib/data';
 import { dayKeyOf, hhmm, minutesOf, parseHHMM, toInstant, todayKey, type DayKey } from '../lib/dates';
-import { EVENT_KIND_LABEL, PRIORITY_LABEL, RRULE_LABEL, STATUS_LABEL, TASK_CATEGORIES, type CalEvent, type EventKind, type Priority, type Task, type TaskStatus } from '../lib/types';
+import { REMINDER_OPTIONS, EVENT_KIND_LABEL, PRIORITY_LABEL, RRULE_LABEL, STATUS_LABEL, TASK_CATEGORIES, type CalEvent, type EventKind, type Priority, type Task, type TaskStatus } from '../lib/types';
 import { ConfirmButton, Dialog, Field, useToast } from './ui';
+import { getPref } from '../lib/prefs';
 import { PostEditor } from './PostEditor';
 import type { SocialPost } from '../lib/types';
 
@@ -26,7 +27,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const REMINDERS: [string, string][] = [['', 'Hatırlatma yok'], ['0', 'Tam zamanında'], ['15', '15 dakika önce'], ['60', '1 saat önce'], ['1440', '1 gün önce'], ['10080', '1 hafta önce']];
+const REMINDERS = REMINDER_OPTIONS;
 
 function TaskEditor({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
   const toast = useToast();
@@ -39,7 +40,7 @@ function TaskEditor({ draft, onClose }: { draft: TaskDraft; onClose: () => void 
     title: draft.title ?? '', description: draft.description ?? '', day: startDay,
     start: draft.starts_at ? hhmm(minutesOf(draft.starts_at)) : '', end: draft.ends_at ? hhmm(minutesOf(draft.ends_at)) : '',
     priority: (draft.priority ?? 'medium') as Priority, category: draft.category ?? '', project_id: draft.project_id ?? '',
-    rrule: draft.rrule ?? '', status: (draft.status ?? 'todo') as TaskStatus, reminder: '', parent_task_id: draft.parent_task_id ?? '',
+    rrule: draft.rrule ?? '', status: (draft.status ?? 'todo') as TaskStatus, reminder: draft.id ? '' : getPref('defaultReminder', ''), parent_task_id: draft.parent_task_id ?? '',
   });
   const allTasks = useTasks();
   const subtasks = draft.id ? (allTasks.data ?? []).filter((t) => t.parent_task_id === draft.id && t.status !== 'cancelled') : [];
@@ -105,7 +106,6 @@ function TaskEditor({ draft, onClose }: { draft: TaskDraft; onClose: () => void 
             </div>
           </div>
         )}
-        {f.reminder && <p className="small muted" style={{ margin: 0 }}>Hatırlatıcı kaydedilir; bildirim gönderimi Faz 4'te devreye girecek.</p>}
         {err && <div className="error">{err}</div>}
         <div className="foot">
           <div className="row">

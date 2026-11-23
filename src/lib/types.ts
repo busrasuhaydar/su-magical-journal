@@ -41,7 +41,8 @@ export const PRIORITY_ORDER: Record<Priority, number> = { urgent: 0, high: 1, me
 export const STATUS_LABEL: Record<TaskStatus, string> = { todo: 'Yapılacak', doing: 'Devam ediyor', done: 'Tamamlandı', postponed: 'Ertelendi', cancelled: 'İptal edildi' };
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = { idea: 'Fikir', planning: 'Planlanıyor', active: 'Aktif', paused: 'Beklemede', completed: 'Tamamlandı', archived: 'Arşivlendi' };
 export const EVENT_KIND_LABEL: Record<EventKind, string> = { meeting: 'Toplantı', exhibition: 'Sergi', fair: 'Sanat fuarı', creative: 'Sanat üretimi', personal: 'Kişisel zaman', break: 'Mola', other: 'Diğer' };
-export const RRULE_LABEL: Record<string, string> = { '': 'Tekrar yok', 'FREQ=DAILY': 'Her gün', 'FREQ=WEEKLY': 'Her hafta', 'FREQ=WEEKLY;INTERVAL=2': 'İki haftada bir', 'FREQ=MONTHLY': 'Her ay', 'FREQ=YEARLY': 'Her yıl' };
+export const RRULE_LABEL: Record<string, string> = { '': 'Tekrar yok', 'FREQ=DAILY': 'Her gün', 'FREQ=DAILY;INTERVAL=2': 'Gün aşırı', 'FREQ=DAILY;INTERVAL=3': 'Üç günde bir', 'FREQ=WEEKLY': 'Her hafta', 'FREQ=WEEKLY;INTERVAL=2': 'İki haftada bir', 'FREQ=MONTHLY': 'Her ay', 'FREQ=MONTHLY;INTERVAL=3': 'Üç ayda bir', 'FREQ=MONTHLY;INTERVAL=6': 'Altı ayda bir', 'FREQ=YEARLY': 'Her yıl' };
+export const REMINDER_OPTIONS: [string, string][] = [['', 'Hatırlatma yok'], ['0', 'Tam zamanında'], ['5', '5 dakika önce'], ['15', '15 dakika önce'], ['30', '30 dakika önce'], ['60', '1 saat önce'], ['180', '3 saat önce'], ['1440', '1 gün önce'], ['4320', '3 gün önce'], ['10080', '1 hafta önce']];
 export const TASK_CATEGORIES = ['Sanat üretimi', 'Proje', 'Toplantı', 'Başvuru', 'Sosyal medya', 'Kişisel', 'Yönetim', 'Sağlık'];
 export const OPEN_STATUSES: TaskStatus[] = ['todo', 'doing', 'postponed'];
 

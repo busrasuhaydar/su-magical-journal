@@ -1,3 +1,4 @@
+import { REMINDER_OPTIONS } from '../lib/types';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarHeart, FolderHeart, Files, CalendarDays, Download, RotateCcw } from 'lucide-react';
@@ -216,6 +217,7 @@ function PrefSettings() {
   const toast = useToast();
   const [city, setCity] = useState(() => getPref('city', 'bursa'));
   const [simple, setSimple] = useState(() => getPref('simple', '0') === '1');
+  const [defRem, setDefRem] = useState(() => getPref('defaultReminder', ''));
   return (
     <section className="glass panel">
       <div className="panel-head"><h2>Görünüm ve tercihler</h2><span className="small muted">Bu cihaza özel</span></div>
@@ -230,6 +232,11 @@ function PrefSettings() {
             <input type="checkbox" checked={simple} onChange={(e) => { setSimple(e.target.checked); setPref('simple', e.target.checked ? '1' : '0'); applySimple(); }} />
             Sade mod (cam bulanıklığını kapat, daha hızlı)
           </label>
+        </Field>
+        <Field label="Yeni görevlerde varsayılan hatırlatıcı">
+          <select className="select" value={defRem} onChange={(e) => { setDefRem(e.target.value); setPref('defaultReminder', e.target.value); toast.ok('Varsayılan hatırlatıcı güncellendi'); }}>
+            {REMINDER_OPTIONS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
         </Field>
       </div>
       <p className="small muted" style={{ marginBottom: 0 }}>Takvimde yalnız Türkiye ve Amerika tatilleri gösterilir. 2026 ve 2027 dinî bayramları Diyanet takvimiyle kesinleşti; 2028 bayramları Diyanet yayımlayana kadar “kesinleşmedi” görünür.</p>

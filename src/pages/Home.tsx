@@ -7,9 +7,10 @@ import { useEditors } from '../components/Editors';
 import { TaskRow } from '../components/TaskRow';
 import { Empty, useToast } from '../components/ui';
 import { ensureJournalDay, useCalendarRange, useCompleteTask, useHolidays, useIdeas, useJournal, useOverdue, useProfile, useProgress, useProjects, useSaveTask, useTasks, usePostsRange } from '../lib/data';
-import { addDays, dayKeyOf, formatRelative, hhmm, minutesOf, startOfWeek, todayKey, formatShort } from '../lib/dates';
+import { addDays, toInstant, dayKeyOf, formatRelative, hhmm, minutesOf, startOfWeek, todayKey, formatShort } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { flag } from '../lib/countries';
+import { REMINDER_OPTIONS, RRULE_LABEL } from '../lib/types';
 import { shareOriginal, useNfts } from '../lib/nft';
 import { bostonDay, bostonTime, useHomePrefs } from '../lib/ui';
 import { IDEA_CATEGORY_LABEL, OPP_DATE_LABEL, PLATFORM_LABEL, POST_STATUS_LABEL, type Platform, type Task } from '../lib/types';
@@ -370,14 +371,42 @@ function Routines() {
     const every = Number(/INTERVAL=(\d+)/.exec(t.rrule!)?.[1] ?? 1);
     return { t, last, days, every };
   }).sort((a, b) => a.days - b.days);
-  if (!rows.length || !hp.visible('routines')) return null;
+  const save = useSaveTask();
+  const { openTask } = useEditors();
+  const [adding, setAdding] = useState(false);
+  const [f, setF] = useState({ title: '', day: today, time: '09:00', rrule: '', rem: '0' });
+  if (!hp.visible('routines')) return null;
+  async function add() {
+    if (!f.title.trim()) return toast.fail(new Error('Ne hatırlatılacak? Bir başlık yaz.'));
+    try {
+      const [h, m] = f.time.split(':').map(Number);
+      const starts_at = f.time ? toInstant(f.day || today, h * 60 + m) : null;
+      await save.mutateAsync({ title: f.title.trim(), due_date: f.day || today, starts_at, ends_at: starts_at ? new Date(Date.parse(starts_at) + 15 * 60000).toISOString() : null, rrule: f.rrule || null, category: 'Kişisel', priority: 'medium', status: 'todo', reminderMinutes: Number(f.rem) });
+      toast.ok('Hatırlatma eklendi'); setF({ title: '', day: today, time: '09:00', rrule: '', rem: f.rem }); setAdding(false);
+    } catch (x) { toast.fail(x); }
+  }
   return (
     <section className="glass panel">
-      <div className="panel-head"><h2>{hp.title('routines', 'Hatırlatmalar')}</h2><span className="count">{rows.length}</span></div>
+      <div className="panel-head"><h2>{hp.title('routines', 'Hatırlatmalar')}</h2><span className="row" style={{ gap: 6 }}><span className="count">{rows.length}</span><button type="button" className="btn btn-primary btn-sm" onClick={() => setAdding((v) => !v)}><Plus size={14} />Ekle</button></span></div>
+      {adding && (
+        <div className="card" style={{ display: 'grid', gap: 8, marginBottom: 10 }}>
+          <input id="rm-title" className="input" autoFocus placeholder="ör. D vitamini al, faturayı öde, Ayşe'yi ara" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <div className="grid-2">
+            <input id="rm-day" type="date" className="input" value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} />
+            <input id="rm-time" type="time" className="input" value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} />
+          </div>
+          <div className="grid-2">
+            <select id="rm-rr" className="select" value={f.rrule} onChange={(e) => setF({ ...f, rrule: e.target.value })}>{Object.entries(RRULE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            <select id="rm-rem" className="select" value={f.rem} onChange={(e) => setF({ ...f, rem: e.target.value })}>{REMINDER_OPTIONS.filter(([k]) => k !== '').map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+          </div>
+          <div className="row"><button type="button" className="btn btn-primary btn-sm" onClick={add} disabled={save.isPending}><Check size={14} />Kaydet</button><button type="button" className="btn btn-glass btn-sm" onClick={() => openTask({ due_date: f.day || today, rrule: f.rrule || null, title: f.title })}><ListPlus size={14} />Ayrıntılı</button></div>
+        </div>
+      )}
+      {!rows.length && !adding && <p className="small muted" style={{ margin: 0 }}>Henüz düzenli bir hatırlatma yok. “Ekle” ile tekrar eden (her gün, hafta, ay) ya da tek seferlik hatırlatma kur.</p>}
       <div style={{ display: 'grid', gap: 8 }}>
         {rows.map(({ t, last, days, every }) => (
           <div key={t.id} className={`routine${days <= 1 ? ' soon' : ''}`}>
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, cursor: 'pointer' }} role="button" tabIndex={0} onClick={() => openTask(t)} onKeyDown={(e) => e.key === 'Enter' && openTask(t)}>
               <b>{t.title}</b>
               <div className="small muted">{last ? `Son: ${formatShort(dayKeyOf(last.completed_at!))} · ` : ''}Sıradaki: {formatShort(t.due_date!)} · {days < 0 ? `${-days} gün gecikti` : days === 0 ? 'bugün' : days === 1 ? 'yarın' : `${days} gün sonra`}{every > 1 ? ` · her ${every} günde bir` : ''}</div>
             </div>
