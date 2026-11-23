@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, CalendarHeart, CheckSquare, FolderHeart, Home, Settings, Files, Plus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, LogOut, Sparkles, Megaphone, Users, Lightbulb, Landmark, Images, Gem } from 'lucide-react';
+import { CalendarDays, CalendarHeart, CheckSquare, FolderHeart, Home, Settings, Files, Plus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, LogOut, Megaphone, Users, Lightbulb, Landmark, Images, Gem, LayoutGrid } from 'lucide-react';
+import { Dialog } from './ui';
 import { formatLong, minutesOf, hhmm, todayKey } from '../lib/dates';
 import { useProfile } from '../lib/data';
 import { currentCity } from '../lib/prefs';
@@ -81,6 +82,9 @@ export function Shell() {
   const profile = useProfile();
   const { openTask } = useEditors();
   const nav = useNavigate();
+  const [more, setMore] = useState(false);
+  const loc = useLocation();
+  useEffect(() => { setMore(false); }, [loc.pathname]);
   return (
     <div className="app">
       <aside className="sidebar glass" style={{ borderRadius: 0, borderTop: 0, borderBottom: 0, borderLeft: 0 }}>
@@ -108,8 +112,16 @@ export function Shell() {
         <NavLink to="/takvim/ay"><CalendarDays size={22} />Takvim</NavLink>
         <button type="button" onClick={() => openTask({ due_date: todayKey() })} aria-label="Görev ekle"><span className="plus"><Plus size={24} /></span></button>
         <NavLink to="/gorevler"><CheckSquare size={22} />Görevler</NavLink>
-        <NavLink to="/ayarlar"><Sparkles size={22} />Daha fazla</NavLink>
+        <button type="button" onClick={() => setMore(true)} aria-label="Tüm sayfalar"><LayoutGrid size={22} />Tümü</button>
       </nav>
+      {more && (
+        <Dialog title="Tüm sayfalar" onClose={() => setMore(false)}>
+          <div className="more-grid">
+            {NAV.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/'}><Icon size={22} strokeWidth={1.75} /><span>{label}</span></NavLink>)}
+            <button type="button" onClick={() => supabase.auth.signOut().then(() => nav('/'))}><LogOut size={22} strokeWidth={1.75} /><span>Çıkış yap</span></button>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }

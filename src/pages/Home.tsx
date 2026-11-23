@@ -37,6 +37,8 @@ export default function Home() {
   const now = useMinute();
   const nowMin = minutesOf(now);
   const { openTask, openEvent } = useEditors();
+  const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 760px)').matches);
+  useEffect(() => { const m = window.matchMedia('(max-width: 760px)'); const f = () => setNarrow(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f); }, []);
   const complete = useCompleteTask();
   const toast = useToast();
   const profile = useProfile();
@@ -116,6 +118,8 @@ export default function Home() {
         </div>
       </section>
 
+      {narrow && <IdeasCard />}
+
       <div className="home-grid">
         <section className="glass panel" hidden={!hp.visible('plan')}>
           <div className="panel-head"><h2>{hp.title('plan', 'Bugünün planı')}</h2><span className="count">{timed.length + untimed.length + allDay.length}</span></div>
@@ -167,7 +171,7 @@ export default function Home() {
           <TodoList />
         </div>
 
-        <div className="col"><ArtOfTheDay /><IdeasCard /></div>
+        <div className="col"><ArtOfTheDay />{!narrow && <IdeasCard />}</div>
 
         <section className="glass panel span-all" hidden={!hp.visible('week')}>
           <div className="panel-head"><h2>{hp.title('week', 'Bu hafta')}</h2><Link className="small" to="/takvim/hafta">Takvim →</Link></div>
