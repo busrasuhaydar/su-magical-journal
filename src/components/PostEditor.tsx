@@ -1,9 +1,9 @@
 // Sosyal medya içerik düzenleyicisi. Projeden de merkezden de açılır; her zaman aynı tek kaydı düzenler.
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, Send, X } from 'lucide-react';
 import { callDispatcher } from '../lib/notify';
-import { postText, shareTo } from '../lib/share';
+import { postText, shareTo, warmShare } from '../lib/share';
 import { useNfts, withWorkName, worksInLinks } from '../lib/nft';
 import { useQuery } from '@tanstack/react-query';
 import { linkFile, uploadFile, useFileLinks, useFiles, useMarkPublished, useProjects, useSavePost, useSignedUrl, useSocialAccounts, useSoftDeletePost } from '../lib/data';
@@ -40,6 +40,9 @@ export function PostEditor({ draft, onClose }: { draft: Partial<SocialPost>; onC
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
   const media = draft.id ? (links.data ?? []).filter((l) => l.entity_type === 'social_post' && l.entity_id === draft.id).map((l) => ({ link: l, file: files.data?.find((x) => x.id === l.file_id) })) : [];
+  // Telefonda paylaş menüsü tıklamanın hemen içinde açılmalı: görselleri önceden hazırla
+  const mediaKey = media.map((m) => m.file?.id).filter(Boolean).join(',');
+  useEffect(() => { warmShare(media.map((m) => m.file).filter(Boolean) as FileRec[]); }, [mediaKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const tags = f.hashtags.split(/[\s,]+/).filter(Boolean).map((t) => (t.startsWith('#') ? t : `#${t}`));
   const xLen = (f.caption_tr || f.caption_en).length + (tags.length ? tags.join(' ').length + 1 : 0);
 
